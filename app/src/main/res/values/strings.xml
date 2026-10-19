@@ -8,6 +8,13 @@
     <string name="mode_display">Affichage</string>
     <string name="mode_audio">Audio</string>
 
+    <string name="home_hero_eyebrow">ENTRAÎNEMENT</string>
+    <string name="home_hero_title">Prêt·e pour quelques caractères ?</string>
+    <plurals name="home_set_count">
+        <item quantity="one">%d car.</item>
+        <item quantity="other">%d car.</item>
+    </plurals>
+    <string name="home_battle_subtitle">À deux, sur ce téléphone</string>
     <string name="home_choose_set">Jeu de caractères</string>
     <string name="home_choose_mode">Mode de quiz</string>
     <plurals name="home_question_count">
@@ -15,6 +22,8 @@
         <item quantity="other">%d questions par série</item>
     </plurals>
 
+    <string name="quiz_loading">Chargement des caractères…</string>
+    <string name="quiz_speaking">Lecture…</string>
     <string name="quiz_load_error">Impossible de charger les caractères.</string>
     <string name="quiz_progress">Question %1$d / %2$d</string>
     <string name="quiz_score">Score : %1$d</string>
@@ -38,18 +47,24 @@
     <string name="quiz_action_see_result">Voir le résultat</string>
     <string name="quiz_feedback_correct">Bonne réponse !</string>
     <string name="quiz_feedback_incorrect">Raté !</string>
-    <string name="quiz_answer_detail">%1$s se lit : %2$s</string>
+    <string name="quiz_reads_as">se lit : %1$s</string>
+    <string name="quiz_result_subtitle">%1$s · %2$s</string>
+    <plurals name="quiz_result_encouragement">
+        <item quantity="one">Encore un caractère à apprivoiser.</item>
+        <item quantity="other">Encore %d caractères à apprivoiser.</item>
+    </plurals>
     <string name="quiz_result_title">Série terminée</string>
     <string name="quiz_result_score">%1$d / %2$d</string>
     <string name="quiz_result_perfect">Sans faute, bravo !</string>
     <string name="quiz_result_mistakes">À revoir</string>
-    <string name="quiz_given_answer">Réponse donnée : %1$s</string>
+    <string name="quiz_given_answer">Réponse donnée :</string>
     <string name="quiz_action_restart">Rejouer</string>
     <string name="quiz_action_home">Retour à l\'accueil</string>
 
     <string name="stats_title">Statistiques</string>
     <string name="battle_title">Mode duel</string>
-    <string name="battle_setup_rules">Un contre un sur le même téléphone, posé à plat entre les deux joueurs : chacun joue sur sa moitié d\'écran. À chaque manche, le premier qui trouve la bonne réponse marque le point. Une erreur bloque le joueur jusqu\'à la manche suivante.</string>
+    <string name="battle_setup_rules">Posez le téléphone à plat entre vous deux, face à face. Chacun répond sur sa moitié : le premier qui répond juste marque le point. Une erreur bloque jusqu’à la manche suivante.</string>
+    <string name="battle_versus">contre</string>
     <plurals name="battle_round_count">
         <item quantity="one">%d manche</item>
         <item quantity="other">%d manches</item>

@@ -47,6 +47,7 @@ app/src/main/java/bzh/enssat/unolingo/
 │   └── quiz/       génération des questions, correction, déroulement d'une série
 ├── data/           chargement des caractères depuis les assets
 ├── speech/         synthèse vocale
+├── sound/          sons de bonne et de mauvaise réponse
 └── ui/
     ├── navigation/ routes et NavHost
     ├── home/       écran d'accueil
@@ -64,6 +65,14 @@ Les caractères sont dans `app/src/main/assets/characters/` (un fichier JSON par
 ```bash
 python tools/gen_characters.py app/src/main/assets/characters
 ```
+
+## Sons et direction artistique
+
+- Les sons de bonne et de mauvaise réponse (`app/src/main/res/raw/`) sont des sons originaux générés par `tools/gen_sounds.py` : `python tools/gen_sounds.py app/src/main/res/raw`.
+- `docs/prompt-direction-artistique.md` contient le brief de direction artistique (inventaire des écrans et contraintes Material 3), à utiliser avec un outil de design ou à transmettre à un·e graphiste.
+- La direction artistique retenue, « Hanamaru » (cahier d’écriture japonais : papier washi, encre sumi, corrections ◯ / ✕, sceaux hanko), est décrite par les maquettes de `docs/ui/`.
+- Polices embarquées (licence SIL Open Font License, textes dans `app/src/main/assets/licenses/`) : Lexend pour l’interface, Klee One pour les caractères japonais, réduite aux caractères utilisés par `tools/subset_fonts.py`. L’icône de l’application est générée par `tools/gen_icon.py`.
+- Captures des écrans principaux sans appareil : `./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.ui.ScreenshotTest"`, images dans `app/build/screenshots/`.
 
 ## Équipe
 

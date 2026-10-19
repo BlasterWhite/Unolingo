@@ -16,9 +16,11 @@ import bzh.enssat.unolingo.domain.quiz.Question
 import bzh.enssat.unolingo.domain.quiz.QuestionGenerator
 import bzh.enssat.unolingo.domain.quiz.QuestionResult
 import bzh.enssat.unolingo.domain.quiz.QuizSession
+import bzh.enssat.unolingo.sound.AnswerSoundPlayer
 import bzh.enssat.unolingo.speech.AndroidJapaneseSpeaker
 import bzh.enssat.unolingo.speech.JapaneseSpeaker
 import bzh.enssat.unolingo.speech.SpeakerStatus
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,12 +57,18 @@ class QuizViewModel(
     private val characterSet: CharacterSet,
     private val mode: QuizMode,
     private val repository: CharacterRepository,
+    private val answerSounds: AnswerSoundPlayer? = null,
     private val speakerFactory: (() -> JapaneseSpeaker)? = null,
     private val generator: QuestionGenerator = QuestionGenerator(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<QuizUiState>(QuizUiState.Loading)
     val uiState: StateFlow<QuizUiState> = _uiState.asStateFlow()
+
+    /** Audio mode: true while a reading is being pronounced (drives the speaker animation). */
+    private val _isSpeaking = MutableStateFlow(false)
+    val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
+    private var speakingJob: Job? = null
 
     private var characters: List<JapaneseCharacter> = emptyList()
     private var session: QuizSession? = null
@@ -99,7 +107,9 @@ class QuizViewModel(
         if (state !is QuizUiState.Answering || state.feedback != null) return
         val updated = current.submit(answer)
         session = updated
-        _uiState.value = state.copy(score = updated.score, feedback = updated.results.last())
+        val result = updated.results.last()
+        _uiState.value = state.copy(score = updated.score, feedback = result)
+        answerSounds?.play(result.isCorrect)
     }
 
     fun next() {
@@ -142,6 +152,8 @@ class QuizViewModel(
         val factory = speakerFactory ?: return
         speaker?.release()
         val newSpeaker = factory().also { speaker = it }
+        speakingJob?.cancel()
+        speakingJob = viewModelScope.launch { newSpeaker.isSpeaking.collect { _isSpeaking.value = it } }
         val status = withTimeoutOrNull(SPEAKER_INIT_TIMEOUT_MILLIS) {
             newSpeaker.status.first { it != SpeakerStatus.INITIALIZING }
         }
@@ -185,6 +197,7 @@ class QuizViewModel(
                     characterSet = characterSet,
                     mode = mode,
                     repository = app.container.characterRepository,
+                    answerSounds = app.container.answerSounds,
                     speakerFactory = if (mode == QuizMode.AUDIO) ({ AndroidJapaneseSpeaker(app) }) else null,
                 )
             }

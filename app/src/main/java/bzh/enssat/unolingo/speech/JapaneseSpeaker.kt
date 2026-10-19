@@ -2,6 +2,7 @@ package bzh.enssat.unolingo.speech
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +15,9 @@ enum class SpeakerStatus { INITIALIZING, READY, MISSING_VOICE, UNAVAILABLE }
 interface JapaneseSpeaker {
     val status: StateFlow<SpeakerStatus>
 
+    /** True while something is being pronounced. */
+    val isSpeaking: StateFlow<Boolean>
+
     /** Interrupts whatever is being said. Ignored unless [status] is [SpeakerStatus.READY]. */
     fun speak(text: String)
 
@@ -23,6 +27,8 @@ interface JapaneseSpeaker {
 class AndroidJapaneseSpeaker(context: Context) : JapaneseSpeaker {
     private val _status = MutableStateFlow(SpeakerStatus.INITIALIZING)
     override val status: StateFlow<SpeakerStatus> = _status.asStateFlow()
+    private val _isSpeaking = MutableStateFlow(false)
+    override val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
 
     private val tts: TextToSpeech = TextToSpeech(context.applicationContext) { initStatus ->
         _status.value = if (initStatus == TextToSpeech.SUCCESS) configure() else SpeakerStatus.UNAVAILABLE
@@ -33,6 +39,25 @@ class AndroidJapaneseSpeaker(context: Context) : JapaneseSpeaker {
         TextToSpeech.LANG_MISSING_DATA, TextToSpeech.LANG_NOT_SUPPORTED -> SpeakerStatus.MISSING_VOICE
         else -> {
             tts.setSpeechRate(SPEECH_RATE)
+            // Called on a TTS binder thread; MutableStateFlow is thread-safe.
+            tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    _isSpeaking.value = true
+                }
+
+                override fun onDone(utteranceId: String?) {
+                    _isSpeaking.value = false
+                }
+
+                override fun onStop(utteranceId: String?, interrupted: Boolean) {
+                    _isSpeaking.value = false
+                }
+
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) {
+                    _isSpeaking.value = false
+                }
+            })
             SpeakerStatus.READY
         }
     }

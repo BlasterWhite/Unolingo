@@ -58,7 +58,7 @@ Keep the battle game logic independent from the transport so the same rules work
 Defaults to follow unless the team decides otherwise (record any deviation in "Architecture decisions"):
 
 - Architecture: MVVM with one `ViewModel` per screen exposing `StateFlow` UI state; Compose screens stay stateless where practical. Navigation with Navigation Compose.
-- Packages under `bzh.enssat.unolingo`: `ui/` (screens + theme), `data/` (database, repositories, character data), `domain/` or `quiz/` (question generation, scoring, battle rules), `speech/` (text-to-speech wrapper), `battle/` (transports).
+- Packages under `bzh.enssat.unolingo`: `ui/` (screens + theme), `data/` (database, repositories, character data), `domain/` or `quiz/` (question generation, scoring, battle rules), `speech/` (text-to-speech wrapper), `sound/` (answer feedback sounds), `battle/` (transports).
 - Quiz logic (question generation, answer checking, scoring) must be pure Kotlin with no Android dependencies so it can be covered by JVM unit tests in `app/src/test`.
 - Database: Room (with KSP), declared in the version catalog.
 - Character data: ship it as a bundled asset (e.g. JSON in `app/src/main/assets/`) or a prepopulated Room table; don't hard-code long character lists in Kotlin.
@@ -81,6 +81,8 @@ Add entries here as decisions are implemented (what was chosen, and why).
 - **Battle**: rules live in the immutable `domain/battle/BattleGame` (`submit(player, answer)`, `nextRound()`), which knows nothing about the transport; Bluetooth/Wi-Fi must reuse it and only relay answers. `BattleViewModel` drives the local game and auto-advances to the next round after a short reveal delay. The split screen rotates player TWO's panel with `Modifier.rotate(180f)` (Compose hit-testing follows the rotation), keeps the screen on and locks the orientation while a game is running.
 - **Shared choice UI**: `ui/common/Choices.kt` (`ChoiceGrid`, `choiceState`, `QuestionPrompt`, `Question.choiceOptions`) is used by both the solo quiz and the battle. `choiceState` keeps the right answer hidden until the round is revealed, so a player locked out by a mistake cannot see it.
 - **Audio**: `speech/JapaneseSpeaker` wraps `TextToSpeech` (status `READY` / `MISSING_VOICE` / `UNAVAILABLE`); `QuizViewModel` owns it in audio mode (created through `speakerFactory`, released in `onCleared`) and shows `QuizUiState.MissingVoice` with an install action when no Japanese voice exists, re-checking on resume. Readings are always spoken **as hiragana** produced by `domain/kana/KanaConverter` (built from the hiragana data, longest syllable first), never as a bare kanji whose reading the engine would pick itself; `CharacterDataTest` checks that every reading converts. The manifest declares a `<queries>` entry for `android.intent.action.TTS_SERVICE`, required for package visibility.
+- **Feedback sounds**: `sound/AnswerSoundPlayer` (SoundPool, app-wide singleton in `AppContainer`) plays `res/raw/answer_correct.wav` / `answer_wrong.wav` when an answer is checked, from `QuizViewModel.submitAnswer` and `BattleViewModel.submitAnswer` (not from composables, so a rotation never replays it). The sounds are original, synthesized by `tools/gen_sounds.py`: never ship Duolingo's (or any third-party) sound files.
+- **Art direction**: `docs/prompt-direction-artistique.md` is the brief for the visual identity (screen and state inventory, Material 3 token constraints). Keep its inventory in sync when screens change; when the art direction lands, apply it through `ui/theme/` tokens rather than per-screen colors.
 - **Homophones**: for audio questions (`bySound = true` in `DistractorPicker`), a distractor never shares an accepted answer with the target in either direction, so を/お, ぢ/じ, づ/ず or kanji with a common reading are never offered together with the right answer.
 - **Japanese text rendering**: display Japanese characters with `ui/common/JapaneseText`, which sets a `ja-JP` locale on the text style; otherwise a French-locale device may render kanji with Chinese glyph variants.
 - **Room**: the `androidx.room` Gradle plugin exports schemas to `app/schemas/` (commit them). No `@Database` exists yet.
@@ -96,6 +98,9 @@ Run from the repo root. On Windows use `gradlew.bat` (or `./gradlew` from Git Ba
 ./gradlew testDebugUnitTest             # JVM unit tests (app/src/test)
 ./gradlew connectedDebugAndroidTest     # instrumented tests (app/src/androidTest), needs a device/emulator
 ./gradlew lint                          # Android lint
+
+# Screenshots of the main screens, written to app/build/screenshots/
+./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.ui.ScreenshotTest"
 
 # Single unit test class / method
 ./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.domain.model.QuizModeTest"
@@ -117,4 +122,13 @@ Run from the repo root. On Windows use `gradlew.bat` (or `./gradlew` from Git Ba
 
 ## UI
 
-Jetpack Compose with Material 3 only (no XML layouts). The app theme is `UnolingoTheme` in `ui/theme/` (`Theme.kt`, `Color.kt`, `Type.kt`), which uses dynamic color on Android 12+. `MainActivity` calls `enableEdgeToEdge()`, so screens must apply the `Scaffold` inner padding / window insets. Make sure the chosen font renders kana and kanji correctly at large sizes (quiz characters are displayed big).
+Jetpack Compose with Material 3 only (no XML layouts). `MainActivity` calls `enableEdgeToEdge()`, so screens must apply the `Scaffold` inner padding / window insets.
+
+The visual identity is the **"Hanamaru" art direction**: mockups in `docs/ui/` (one PNG per screen and state, plus the concept, palette, typography and motion boards). Match them when changing a screen.
+
+- **Theme** (`ui/theme/`): `UnolingoTheme` uses the brand color schemes of `Color.kt` (light and dark), **no dynamic color**, `UnolingoTypography` and `UnolingoShapes`. Color roles carry meaning: `primaryContainer` = right answer, `errorContainer` = wrong answer, `secondaryContainer` = selected, `primary` = player 1, `tertiary` (gold) = player 2 and celebration only. Never hard-code colors in screens.
+- **Fonts** (`res/font/`, see `tools/subset_fonts.py`): Lexend for all UI and romaji text; **Klee One for every Japanese character**, never for Latin text. Klee One is subset to the characters of the data files, so **re-run `tools/subset_fonts.py` after adding characters** (otherwise they fall back to the system font). Display Japanese with `ui/common/JapaneseText` and a `KanaStyles` size (`Hero` 96 → `Compact` 28); in mixed French/Japanese text use `appendMixed` in a `buildAnnotatedString`.
+- **Components** (`ui/common/`): `ChoiceButton` (raised face on a 4 dp lip that flattens when pressed, ◯/✕ marks, shake on a wrong answer) is used by quiz choices, battle choices and the home set cards; `PrimaryButton` / `SecondaryButton` (56 dp pills); `AnswerMark` (◯/✕: right/wrong never relies on color alone); `PlayerSeal` (round 一 for player 1, square 二 for player 2, "stamp" animation on a point); `Hanamaru` (reserved for a perfect series); `Modifier.seigaiha` / `Modifier.kanoko` patterns, **never behind a character to recognize, a choice grid or body text**.
+- **Icons**: Material Symbols Rounded, weight 500, as vector drawables in `res/drawable` (`ic_*`; the filled variant marks an active state). The launcher icon is generated by `tools/gen_icon.py` (adaptive background, foreground and monochrome; the "う" is vectorized from Klee One).
+- **Motion**: answer feedback ≤ 300 ms (◯ trace 200 ms, shake 240 ms, correction card 220 ms, next question 280 ms, battle stamp 260 ms); the hanamaru (700 ms) is the only longer animation.
+- **Screenshot tests**: `ScreenshotTest` (Robolectric, `app/src/test/.../ui/`) renders the real screens and writes PNGs to `app/build/screenshots/` during `testDebugUnitTest`; review them after UI changes. Robolectric has no TTS engine, so audio questions can only be checked on a device.

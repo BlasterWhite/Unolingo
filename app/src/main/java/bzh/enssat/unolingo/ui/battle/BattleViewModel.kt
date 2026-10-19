@@ -12,6 +12,7 @@ import bzh.enssat.unolingo.domain.battle.BattleGame
 import bzh.enssat.unolingo.domain.battle.Player
 import bzh.enssat.unolingo.domain.model.CharacterSet
 import bzh.enssat.unolingo.domain.quiz.QuestionGenerator
+import bzh.enssat.unolingo.sound.AnswerSoundPlayer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,7 @@ sealed interface BattleUiState {
 /** Local battle: both players answer on this device (split screen). */
 class BattleViewModel(
     private val repository: CharacterRepository,
+    private val answerSounds: AnswerSoundPlayer? = null,
     private val generator: QuestionGenerator = QuestionGenerator(),
     private val revealDelayMillis: Long = REVEAL_DELAY_MILLIS,
 ) : ViewModel() {
@@ -73,6 +75,7 @@ class BattleViewModel(
         val updated = game.submit(player, answer)
         if (updated == game) return
         _uiState.value = BattleUiState.Playing(updated)
+        answerSounds?.play(correct = updated.currentRound.winner == player)
         if (updated.currentRound.isOver && !updated.isFinished) {
             // Leave both players time to see the right answer before the next round.
             gameJob = viewModelScope.launch {
@@ -95,7 +98,7 @@ class BattleViewModel(
         val Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as UnolingoApplication
-                BattleViewModel(app.container.characterRepository)
+                BattleViewModel(app.container.characterRepository, app.container.answerSounds)
             }
         }
     }
