@@ -1,3 +1,78 @@
 <resources>
     <string name="app_name">Unolingo</string>
+
+    <string name="set_hiragana">Hiragana</string>
+    <string name="set_katakana">Katakana</string>
+    <string name="set_kanji">Kanji</string>
+
+    <string name="mode_display">Affichage</string>
+    <string name="mode_audio">Audio</string>
+
+    <string name="home_choose_set">Jeu de caractères</string>
+    <string name="home_choose_mode">Mode de quiz</string>
+    <plurals name="home_question_count">
+        <item quantity="one">%d question par série</item>
+        <item quantity="other">%d questions par série</item>
+    </plurals>
+
+    <string name="quiz_load_error">Impossible de charger les caractères.</string>
+    <string name="quiz_progress">Question %1$d / %2$d</string>
+    <string name="quiz_score">Score : %1$d</string>
+    <string name="quiz_prompt_reading">Quelle est la lecture de ce caractère ?</string>
+    <string name="quiz_prompt_character">Quel caractère se lit ainsi ?</string>
+    <string name="quiz_prompt_sound">Quel caractère entendez-vous ?</string>
+    <string name="quiz_prompt_pronunciation">Quelle est la bonne prononciation ?</string>
+    <string name="quiz_action_replay">Réécouter</string>
+    <string name="quiz_sound_option">Son %1$d</string>
+    <string name="quiz_sound_option_revealed">Son %1$d · %2$s</string>
+    <string name="quiz_missing_voice_title">Voix japonaise manquante</string>
+    <string name="quiz_missing_voice_message">La synthèse vocale de ce téléphone n\'a pas de voix japonaise. Installez-la, puis revenez ici.</string>
+    <string name="quiz_action_install_voice">Installer la voix japonaise</string>
+    <string name="quiz_tts_unavailable_title">Synthèse vocale indisponible</string>
+    <string name="quiz_tts_unavailable_message">Aucun moteur de synthèse vocale utilisable n\'a été trouvé sur cet appareil.</string>
+    <string name="quiz_action_retry">Réessayer</string>
+    <string name="quiz_meaning">Sens : %1$s</string>
+    <string name="quiz_answer_label">Lecture en rōmaji</string>
+    <string name="quiz_action_validate">Valider</string>
+    <string name="quiz_action_next">Question suivante</string>
+    <string name="quiz_action_see_result">Voir le résultat</string>
+    <string name="quiz_feedback_correct">Bonne réponse !</string>
+    <string name="quiz_feedback_incorrect">Raté !</string>
+    <string name="quiz_answer_detail">%1$s se lit : %2$s</string>
+    <string name="quiz_result_title">Série terminée</string>
+    <string name="quiz_result_score">%1$d / %2$d</string>
+    <string name="quiz_result_perfect">Sans faute, bravo !</string>
+    <string name="quiz_result_mistakes">À revoir</string>
+    <string name="quiz_given_answer">Réponse donnée : %1$s</string>
+    <string name="quiz_action_restart">Rejouer</string>
+    <string name="quiz_action_home">Retour à l\'accueil</string>
+
+    <string name="stats_title">Statistiques</string>
+    <string name="battle_title">Mode duel</string>
+    <string name="battle_setup_rules">Un contre un sur le même téléphone, posé à plat entre les deux joueurs : chacun joue sur sa moitié d\'écran. À chaque manche, le premier qui trouve la bonne réponse marque le point. Une erreur bloque le joueur jusqu\'à la manche suivante.</string>
+    <plurals name="battle_round_count">
+        <item quantity="one">%d manche</item>
+        <item quantity="other">%d manches</item>
+    </plurals>
+    <string name="battle_start">Commencer le duel</string>
+    <string name="battle_player_one">Joueur 1</string>
+    <string name="battle_player_two">Joueur 2</string>
+    <string name="battle_score">%1$d – %2$d</string>
+    <string name="battle_round">Manche %1$d / %2$d</string>
+    <string name="battle_status_wrong">Raté ! Attends ton adversaire…</string>
+    <string name="battle_status_point_you">Point pour toi !</string>
+    <string name="battle_status_point_opponent">Point pour ton adversaire</string>
+    <string name="battle_status_no_point">Personne ne marque</string>
+    <string name="battle_result_win">Victoire !</string>
+    <string name="battle_result_lose">Défaite</string>
+    <string name="battle_result_draw">Égalité</string>
+    <string name="battle_action_rematch">Revanche</string>
+    <string name="battle_action_quit">Quitter</string>
+    <string name="battle_action_continue">Continuer</string>
+    <string name="battle_quit_title">Quitter le duel ?</string>
+    <string name="battle_quit_message">La partie en cours sera perdue.</string>
+
+    <string name="action_start">Commencer</string>
+    <string name="action_back">Retour</string>
+    <string name="coming_soon">Bientôt disponible</string>
 </resources>
