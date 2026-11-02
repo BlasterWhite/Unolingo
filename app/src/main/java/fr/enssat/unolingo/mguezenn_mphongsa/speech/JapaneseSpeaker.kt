@@ -17,7 +17,9 @@ object SpeechRates {
     /** Slightly slower than normal, for learners (the quiz pace). */
     const val DEFAULT = 0.85f
     const val NORMAL = 1.0f
-    const val SLOW = 0.5f
+
+    /** Clearly slower than [DEFAULT], so the slow listening is easy to tell apart. */
+    const val SLOW = 0.3f
 
     fun of(pace: SpeechPace): Float = if (pace == SpeechPace.NORMAL) NORMAL else SLOW
 }

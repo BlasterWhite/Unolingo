@@ -17,9 +17,12 @@ import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionResult
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuizPool
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuizSession
 import fr.enssat.unolingo.mguezenn_mphongsa.sound.AnswerSoundPlayer
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.speech.SpeechRateAlternator
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.speech.SpokenReadings
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.AndroidJapaneseSpeaker
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.JapaneseSpeaker
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeakerStatus
+import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeechRates
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -73,11 +76,16 @@ class QuizViewModel(
     private var characters: List<JapaneseCharacter> = emptyList()
     private var session: QuizSession? = null
     private var speaker: JapaneseSpeaker? = null
+    private var spokenReadings = SpokenReadings(emptyList())
+
+    /** Successive listenings of the same reading alternate normal and slow pace, like in the Apprendre screen. */
+    private val rateAlternator = SpeechRateAlternator()
 
     init {
         viewModelScope.launch {
             try {
                 characters = QuizPool.select(characterSet, repository.getCharacters(characterSet))
+                spokenReadings = SpokenReadings(characters)
                 if (speakerFactory != null) {
                     prepareSpeaker()
                 } else {
@@ -176,12 +184,13 @@ class QuizViewModel(
     }
 
     /**
-     * Speaks [reading] (romaji) of [character] as the hiragana reading of the TP data (`kanaReadings`), so the engine
-     * says exactly this reading and not another one of a kanji. The romaji → hiragana `KanaConverter` is no longer
-     * used here: it is greedy and cannot handle っ or ん before a vowel, which kanji readings need.
+     * Speaks [reading] (romaji) as the hiragana reading of the TP data (`kanaReadings`), so the engine says exactly
+     * this reading and not another one of a kanji. [reading] may belong to another character than [character] (the
+     * wrong proposals of a "character → sound" question), hence the lookup over the whole quiz pool.
      */
     private fun speakReading(character: JapaneseCharacter, reading: String) {
-        speaker?.speak(character.hiraganaFor(reading) ?: character.symbol)
+        val text = spokenReadings.hiraganaFor(reading) ?: character.hiraganaFor(reading) ?: character.symbol
+        speaker?.speak(text, SpeechRates.of(rateAlternator.next(text)))
     }
 
     private fun onLoadError(e: Exception) {
