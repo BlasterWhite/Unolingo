@@ -372,6 +372,7 @@ private fun ChoiceQuestionContent(
 
 @Composable
 internal fun MeaningText(character: JapaneseCharacter) {
+    // English meanings come from the TP data (the French ones of the old data files are gone).
     character.meaning?.let {
         Text(
             text = stringResource(R.string.quiz_meaning, it),

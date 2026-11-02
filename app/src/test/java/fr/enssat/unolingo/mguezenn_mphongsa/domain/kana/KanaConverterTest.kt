@@ -1,8 +1,7 @@
 package fr.enssat.unolingo.mguezenn_mphongsa.domain.kana
 
-import fr.enssat.unolingo.mguezenn_mphongsa.data.AssetCharacterRepository
 import fr.enssat.unolingo.mguezenn_mphongsa.data.CharacterDataParser
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
+import fr.enssat.unolingo.mguezenn_mphongsa.data.parseRawKana
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -10,9 +9,7 @@ import java.io.File
 
 class KanaConverterTest {
     private val converter = KanaConverter(
-        CharacterDataParser.parse(
-            File("src/main/assets", AssetCharacterRepository.assetPath(CharacterSet.HIRAGANA)).readText(),
-        ),
+        CharacterDataParser.mapHiragana(parseRawKana(File("src/main/res/raw/kana_data.json").readText())),
     )
 
     @Test

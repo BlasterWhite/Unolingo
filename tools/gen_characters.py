@@ -1,4 +1,9 @@
-"""Generates app/src/main/assets/characters/{hiragana,katakana,kanji}.json.
+"""Generates app/src/main/assets/characters/extras.json: the house additions to the TP data.
+
+The characters themselves (symbols, romaji, kanji readings) come from the TP files in app/src/main/res/raw
+(kana_data.json, kanji_jouyou.json). This file only holds what they lack, merged by symbol at load time:
+  - "alternatives": other accepted spellings of a kana (si, nn, di…), never displayed;
+  - "similar": visually confusable symbols, used to pick distractors.
 
 Usage (from the repo root): python tools/gen_characters.py app/src/main/assets/characters
 """
@@ -8,7 +13,7 @@ from pathlib import Path
 
 out_dir = Path(sys.argv[1])
 
-# (hiragana, readings) — first reading is the Hepburn one shown to the user.
+# (hiragana, readings) — first reading is the Hepburn one of the TP file; the rest become "alternatives".
 KANA = [
     # Basic (gojūon)
     ("あ", ["a"]), ("い", ["i"]), ("う", ["u"]), ("え", ["e"]), ("お", ["o"]),
@@ -58,97 +63,39 @@ def similar_map(groups):
     return result
 
 
-def kana_entries(convert, groups):
+def kana_extras(convert, groups):
     similar = similar_map(groups)
-    entries = []
+    extras = {}
     for hira, readings in KANA:
         symbol = convert(hira)
-        # A kana has one displayed reading; other spellings are only accepted as answers.
-        entry = {"symbol": symbol, "readings": readings[:1]}
+        entry = {}
+        # The first reading is the displayed Hepburn one (it is in the TP file); the others are only accepted.
         if len(readings) > 1:
             entry["alternatives"] = readings[1:]
         if symbol in similar:
             entry["similar"] = similar[symbol]
-        entries.append(entry)
-    return entries
+        if entry:
+            extras[symbol] = entry
+    return extras
 
 
-# (kanji, readings, French meaning) — JLPT N5 basics, readings in wāpuro rōmaji (long vowels as ou/uu).
-KANJI = [
-    ("一", ["ichi", "itsu", "hito"], "un"),
-    ("二", ["ni", "futa"], "deux"),
-    ("三", ["san", "mi"], "trois"),
-    ("四", ["shi", "yon", "yo"], "quatre"),
-    ("五", ["go", "itsu"], "cinq"),
-    ("六", ["roku", "mu"], "six"),
-    ("七", ["shichi", "nana"], "sept"),
-    ("八", ["hachi", "ya"], "huit"),
-    ("九", ["kyuu", "ku", "kokono"], "neuf"),
-    ("十", ["juu", "too", "to"], "dix"),
-    ("百", ["hyaku"], "cent"),
-    ("千", ["sen", "chi"], "mille"),
-    ("万", ["man", "ban"], "dix mille"),
-    ("円", ["en", "maru"], "yen, cercle"),
-    ("日", ["nichi", "jitsu", "hi", "ka"], "jour, soleil"),
-    ("月", ["getsu", "gatsu", "tsuki"], "lune, mois"),
-    ("火", ["ka", "hi"], "feu"),
-    ("水", ["sui", "mizu"], "eau"),
-    ("木", ["moku", "boku", "ki"], "arbre"),
-    ("金", ["kin", "kon", "kane"], "or, argent"),
-    ("土", ["do", "to", "tsuchi"], "terre"),
-    ("人", ["jin", "nin", "hito"], "personne"),
-    ("山", ["san", "yama"], "montagne"),
-    ("川", ["sen", "kawa"], "rivière"),
-    ("口", ["kou", "ku", "kuchi"], "bouche"),
-    ("目", ["moku", "me"], "œil"),
-    ("手", ["shu", "te"], "main"),
-    ("足", ["soku", "ashi"], "pied"),
-    ("大", ["dai", "tai", "oo"], "grand"),
-    ("小", ["shou", "chii", "ko"], "petit"),
-    ("中", ["chuu", "naka"], "milieu, dedans"),
-    ("上", ["jou", "ue", "kami"], "dessus"),
-    ("下", ["ka", "ge", "shita"], "dessous"),
-    ("年", ["nen", "toshi"], "année"),
-    ("学", ["gaku", "mana"], "étudier"),
-    ("生", ["sei", "shou", "nama"], "vie, naître"),
-    ("先", ["sen", "saki"], "avant, précédent"),
-    ("時", ["ji", "toki"], "temps, heure"),
-    ("本", ["hon", "moto"], "livre, origine"),
-    ("男", ["dan", "nan", "otoko"], "homme"),
-    ("女", ["jo", "nyo", "onna"], "femme"),
-    ("子", ["shi", "su", "ko"], "enfant"),
-    ("白", ["haku", "byaku", "shiro"], "blanc"),
-    ("天", ["ten", "ama"], "ciel"),
-    ("雨", ["u", "ame"], "pluie"),
-    ("花", ["ka", "hana"], "fleur"),
-    ("見", ["ken", "mi"], "voir"),
-    ("行", ["kou", "gyou", "i"], "aller"),
-    ("来", ["rai", "ku", "ki"], "venir"),
-]
 KANJI_SIMILAR = ["日目白", "人入", "大天", "木本", "土上", "千十", "未末"]
 
 
-def kanji_entries():
-    similar = similar_map(KANJI_SIMILAR)
-    symbols = {k for k, _, _ in KANJI}
-    entries = []
-    for symbol, readings, meaning in KANJI:
-        entry = {"symbol": symbol, "readings": readings, "meaning": meaning}
-        sims = [s for s in similar.get(symbol, []) if s in symbols]
-        if sims:
-            entry["similar"] = sims
-        entries.append(entry)
-    return entries
-
-
-def write(name, entries):
-    path = out_dir / f"{name}.json"
-    lines = ",\n".join("    " + json.dumps(e, ensure_ascii=False) for e in entries)
-    path.write_text('{\n  "characters": [\n' + lines + "\n  ]\n}\n", encoding="utf-8", newline="\n")
-    print(path, len(entries))
+def kanji_extras():
+    return {s: {"similar": o} for s, o in similar_map(KANJI_SIMILAR).items()}
 
 
 out_dir.mkdir(parents=True, exist_ok=True)
-write("hiragana", kana_entries(lambda s: s, HIRAGANA_SIMILAR))
-write("katakana", kana_entries(to_katakana, KATAKANA_SIMILAR))
-write("kanji", kanji_entries())
+extras = {
+    "hiragana": kana_extras(lambda s: s, HIRAGANA_SIMILAR),
+    "katakana": kana_extras(to_katakana, KATAKANA_SIMILAR),
+    "kanji": kanji_extras(),
+}
+lines = []
+for name, entries in extras.items():
+    body = ",\n".join(f"    {json.dumps(k, ensure_ascii=False)}: {json.dumps(v, ensure_ascii=False)}" for k, v in entries.items())
+    lines.append(f'  "{name}": {{\n{body}\n  }}')
+path = out_dir / "extras.json"
+path.write_text("{\n" + ",\n".join(lines) + "\n}\n", encoding="utf-8", newline="\n")
+print(path, {k: len(v) for k, v in extras.items()})

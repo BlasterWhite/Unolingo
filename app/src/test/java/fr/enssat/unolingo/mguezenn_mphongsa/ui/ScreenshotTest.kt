@@ -150,7 +150,7 @@ class ScreenshotTest {
     @Test
     fun learn_kanjiCard() {
         show { LearnScreen(CharacterSet.KANJI, onBack = {}) }
-        waitForLearnCard("1 / 49")
+        waitForLearnCard("1 / 2136")
         capture("learn-kanji")
     }
 
