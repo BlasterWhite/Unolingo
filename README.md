@@ -39,7 +39,7 @@ Sous Windows, utiliser `gradlew.bat` à la place de `./gradlew`.
 ## Organisation du code
 
 ```
-app/src/main/java/bzh/enssat/unolingo/
+app/src/main/java/fr/enssat/unolingo/mguezenn_mphongsa/
 ├── domain/         logique métier en Kotlin pur
 │   ├── model/      caractères, jeux de caractères, modes de quiz
 │   ├── battle/     règles du duel
@@ -72,7 +72,7 @@ python tools/gen_characters.py app/src/main/assets/characters
 - `docs/prompt-direction-artistique.md` contient le brief de direction artistique (inventaire des écrans et contraintes Material 3), à utiliser avec un outil de design ou à transmettre à un·e graphiste.
 - La direction artistique retenue, « Hanamaru » (cahier d’écriture japonais : papier washi, encre sumi, corrections ◯ / ✕, sceaux hanko), est décrite par les maquettes de `docs/ui/`.
 - Polices embarquées (licence SIL Open Font License, textes dans `app/src/main/assets/licenses/`) : Lexend pour l’interface, Klee One pour les caractères japonais, réduite aux caractères utilisés par `tools/subset_fonts.py`. L’icône de l’application est générée par `tools/gen_icon.py`.
-- Captures des écrans principaux sans appareil : `./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.ui.ScreenshotTest"`, images dans `app/build/screenshots/`.
+- Captures des écrans principaux sans appareil : `./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.ui.ScreenshotTest"`, images dans `app/build/screenshots/`.
 
 ## Équipe
 

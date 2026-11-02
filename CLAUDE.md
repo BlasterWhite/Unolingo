@@ -58,7 +58,7 @@ Keep the battle game logic independent from the transport so the same rules work
 Defaults to follow unless the team decides otherwise (record any deviation in "Architecture decisions"):
 
 - Architecture: MVVM with one `ViewModel` per screen exposing `StateFlow` UI state; Compose screens stay stateless where practical. Navigation with Navigation Compose.
-- Packages under `bzh.enssat.unolingo`: `ui/` (screens + theme), `data/` (database, repositories, character data), `domain/` or `quiz/` (question generation, scoring, battle rules), `speech/` (text-to-speech wrapper), `sound/` (answer feedback sounds), `battle/` (transports).
+- Packages under `fr.enssat.unolingo.mguezenn_mphongsa`: `ui/` (screens + theme), `data/` (database, repositories, character data), `domain/` or `quiz/` (question generation, scoring, battle rules), `speech/` (text-to-speech wrapper), `sound/` (answer feedback sounds), `battle/` (transports).
 - Quiz logic (question generation, answer checking, scoring) must be pure Kotlin with no Android dependencies so it can be covered by JVM unit tests in `app/src/test`.
 - Database: Room (with KSP), declared in the version catalog.
 - Character data: ship it as a bundled asset (e.g. JSON in `app/src/main/assets/`) or a prepopulated Room table; don't hard-code long character lists in Kotlin.
@@ -70,6 +70,7 @@ Defaults to follow unless the team decides otherwise (record any deviation in "A
 
 Add entries here as decisions are implemented (what was chosen, and why).
 
+- **Package name**: the TP imposes `fr.enssat.<project>.<login1>_<login2>`, so the namespace and applicationId are `fr.enssat.unolingo.mguezenn_mphongsa` (lets the teacher install every project on one phone).
 - **Navigation**: Navigation Compose with type-safe `@Serializable` routes in `ui/navigation/Routes.kt`; `UnolingoNavHost` owns the `NavController` and screens receive plain callbacks (`onStartQuiz`, `onBack`…), never the controller. Enums passed as route arguments (`CharacterSet`, `QuizMode`) are `@Serializable` and `@Keep`.
 - **Domain model**: `domain/model/` holds pure Kotlin enums. `QuizMode` carries its question count and question types, so UI and quiz logic read them from there instead of hard-coding 10/20. UI labels for enums are mapped to string resources in `ui/common/Labels.kt`.
 - **Screens**: each screen owns its `Scaffold` (and therefore its insets); `MainActivity` only sets the theme and the NavHost. `ui/common/PlaceholderScreen` is a temporary shell for unimplemented features; replace it as features land.
@@ -100,19 +101,19 @@ Run from the repo root. On Windows use `gradlew.bat` (or `./gradlew` from Git Ba
 ./gradlew lint                          # Android lint
 
 # Screenshots of the main screens, written to app/build/screenshots/
-./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.ui.ScreenshotTest"
+./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.ui.ScreenshotTest"
 
 # Single unit test class / method
-./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.domain.model.QuizModeTest"
-./gradlew testDebugUnitTest --tests "bzh.enssat.unolingo.domain.model.QuizModeTest.displayMode_hasTenVisualQuestions"
+./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizModeTest"
+./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizModeTest.displayMode_hasTenVisualQuestions"
 
 # Single instrumented test class
-./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=bzh.enssat.unolingo.ExampleInstrumentedTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=fr.enssat.unolingo.mguezenn_mphongsa.ExampleInstrumentedTest
 ```
 
 ## Build setup
 
-- Single module `:app`, package / applicationId `bzh.enssat.unolingo`.
+- Single module `:app`, package / applicationId `fr.enssat.unolingo.mguezenn_mphongsa`.
 - Very recent toolchain: AGP 9.4, Gradle 9.6, Kotlin 2.2, compileSdk/targetSdk 37, minSdk 26, Java 11 source/target.
 - AGP 9 provides built-in Kotlin support, so there is no `org.jetbrains.kotlin.android` plugin (the app applies `kotlin.compose`, `kotlin.serialization`, `ksp` and `room`). Don't add the standalone Kotlin Android plugin.
 - AGP 9 DSL is used (`compileSdk { version = release(37) }`, `optimization { enable = false }` in release instead of `isMinifyEnabled`). Follow that DSL style when editing `app/build.gradle.kts`.

@@ -7,13 +7,13 @@ plugins {
 }
 
 android {
-    namespace = "bzh.enssat.unolingo"
+    namespace = "fr.enssat.unolingo.mguezenn_mphongsa"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "bzh.enssat.unolingo"
+        applicationId = "fr.enssat.unolingo.mguezenn_mphongsa"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
