@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -24,6 +25,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.battle.BattleScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceTestTag
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.Hanamaru
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.learn.LearnScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 import org.junit.Rule
@@ -73,7 +75,7 @@ class ScreenshotTest {
 
     @Test
     fun home() {
-        show { HomeScreen(onStartQuiz = { _, _ -> }, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home")
     }
@@ -81,7 +83,7 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "+night")
     fun homeDark() {
-        show { HomeScreen(onStartQuiz = { _, _ -> }, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home-dark")
     }
@@ -118,6 +120,38 @@ class ScreenshotTest {
             listOf("Question 1 / 20", "Réessayer").any { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
         }
         capture("quiz-audio")
+    }
+
+    /** Waits for the card counter, or for a voice problem: Robolectric's TTS shadow decides which one shows. */
+    private fun waitForLearnCard(counter: String) = compose.waitUntil(10_000) {
+        listOf(counter, "Réessayer").any { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
+    }
+
+    @Test
+    fun learn_kanaCardsAndNavigation() {
+        show { LearnScreen(CharacterSet.HIRAGANA, onBack = {}) }
+        waitForLearnCard("1 / 104")
+        capture("learn")
+        if (compose.onAllNodesWithText("1 / 104").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onAllNodesWithContentDescription("Fiche suivante").onFirst().performClick()
+            waitForText("2 / 104")
+            capture("learn-next")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun learnDark() {
+        show { LearnScreen(CharacterSet.KATAKANA, onBack = {}) }
+        waitForLearnCard("1 / 104")
+        capture("learn-dark")
+    }
+
+    @Test
+    fun learn_kanjiCard() {
+        show { LearnScreen(CharacterSet.KANJI, onBack = {}) }
+        waitForLearnCard("1 / 49")
+        capture("learn-kanji")
     }
 
     @Test
