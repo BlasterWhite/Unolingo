@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.enssat.unolingo.mguezenn_mphongsa.data.CharacterRepository
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.KanaReadings
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.JapaneseSpeaker
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeakerStatus
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeechRates
@@ -39,7 +40,17 @@ class LearnViewModelTest {
         JapaneseCharacter("い", listOf("i")),
         JapaneseCharacter("か", listOf("ka")),
     )
-    private val kanji = listOf(JapaneseCharacter("日", listOf("nichi", "hi", "ka"), meaning = "jour"))
+    private val kanji = listOf(
+        JapaneseCharacter("日", listOf("nichi", "hi", "ka"), meaning = "jour"),
+        JapaneseCharacter(
+            "山", listOf("san", "yama"), meaning = "mountain", grade = 1, meaningsEn = listOf("mountain"),
+            kanaReadings = KanaReadings(on = listOf("さん"), kun = listOf("やま")),
+        ),
+        JapaneseCharacter(
+            "校", listOf("kou"), meaning = "school", grade = 2, meaningsEn = listOf("school"),
+            kanaReadings = KanaReadings(on = listOf("こう")),
+        ),
+    )
 
     private val repository = object : CharacterRepository {
         override suspend fun getCharacters(set: CharacterSet) = if (set == CharacterSet.KANJI) kanji else hiragana
@@ -112,5 +123,37 @@ class LearnViewModelTest {
     fun speechUnavailable_isReported() {
         val vm = viewModel(CharacterSet.HIRAGANA, FakeSpeaker(SpeakerStatus.UNAVAILABLE))
         assertEquals(LearnUiState.SpeechUnavailable, vm.uiState.value)
+    }
+
+    @Test
+    fun kanjiSpeak_readsTheSelectedHiraganaReading() {
+        val speaker = FakeSpeaker(SpeakerStatus.READY)
+        val vm = viewModel(CharacterSet.KANJI, speaker)
+        vm.selectGrade(1)
+        vm.speak()
+        vm.selectReading(1)
+        assertEquals(listOf("さん", "やま"), speaker.spoken.map { it.first })
+        assertEquals(1, vm.showing().readingIndex)
+        vm.next()
+        vm.selectGrade(null)
+        assertEquals(0, vm.showing().readingIndex)
+    }
+
+    @Test
+    fun selectGrade_filtersCardsAndRestartsAtTheFirst() {
+        val vm = viewModel(CharacterSet.KANJI, FakeSpeaker(SpeakerStatus.READY))
+        assertEquals(listOf(1, 2), vm.showing().grades)
+        vm.next()
+        vm.selectGrade(2)
+        assertEquals(listOf("校"), vm.showing().characters.map { it.symbol })
+        assertEquals(0, vm.showing().index)
+        assertEquals(2, vm.showing().selectedGrade)
+        vm.selectGrade(null)
+        assertEquals(3, vm.showing().characters.size)
+    }
+
+    @Test
+    fun kana_haveNoGradeFilter() {
+        assertTrue(viewModel(CharacterSet.HIRAGANA, FakeSpeaker(SpeakerStatus.READY)).showing().grades.isEmpty())
     }
 }

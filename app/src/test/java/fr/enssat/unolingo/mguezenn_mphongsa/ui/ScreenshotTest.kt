@@ -152,6 +152,11 @@ class ScreenshotTest {
         show { LearnScreen(CharacterSet.KANJI, onBack = {}) }
         waitForLearnCard("1 / 2136")
         capture("learn-kanji")
+        if (compose.onAllNodesWithText("1 / 2136").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onAllNodesWithText("Grade 2").onFirst().performClick()
+            waitForText("1 / 160")
+            capture("learn-kanji-grade2")
+        }
     }
 
     @Test

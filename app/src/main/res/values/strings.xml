@@ -95,6 +95,10 @@
     <string name="learn_action_next">Fiche suivante</string>
     <string name="learn_action_listen">Écouter</string>
     <string name="learn_readings">Lectures : %1$s</string>
+    <string name="learn_filter_all">Tous</string>
+    <string name="learn_grade">Grade %1$d</string>
+    <string name="learn_on_yomi">On\'yomi</string>
+    <string name="learn_kun_yomi">Kun\'yomi</string>
     <string name="learn_reading">Lecture : %1$s</string>
 
     <string name="action_start">Commencer</string>
