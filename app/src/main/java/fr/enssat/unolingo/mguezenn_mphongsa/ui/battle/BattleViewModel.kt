@@ -12,6 +12,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.domain.battle.BattleGame
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.battle.Player
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionGenerator
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuizPool
 import fr.enssat.unolingo.mguezenn_mphongsa.sound.AnswerSoundPlayer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -51,7 +52,7 @@ class BattleViewModel(
         _uiState.value = BattleUiState.Loading
         gameJob = viewModelScope.launch {
             try {
-                val characters = repository.getCharacters(set)
+                val characters = QuizPool.select(set, repository.getCharacters(set))
                 _uiState.value = BattleUiState.Playing(BattleGame.create(characters, generator))
             } catch (e: IOException) {
                 onLoadError(set, e)
