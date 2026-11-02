@@ -31,6 +31,10 @@ data class JapaneseCharacter(
         require(readings.isNotEmpty()) { "$symbol has no reading" }
     }
 
+    /** Short English meaning for display (first three of [meaningsEn]), null for kana. Kept for `ui/learn`. */
+    val meaning: String?
+        get() = meaningsEn.take(3).joinToString(", ").ifEmpty { null }
+
     val acceptedAnswers: List<String>
         get() = readings + alternatives
 
