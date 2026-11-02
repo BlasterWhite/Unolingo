@@ -60,6 +60,7 @@ object CharacterDataParser {
             alternatives = (fullWords + extra?.alternatives.orEmpty()).distinct(),
             grade = kanji.grade,
             meaningsEn = kanji.meanings,
+            meaning = kanji.meanings.take(3).joinToString(", ").ifEmpty { null },
             kanaReadings = KanaReadings(on = kept.filter { it.isOn }.map { it.kana }, kun = kept.filterNot { it.isOn }.map { it.kana }),
             similar = extra?.similar.orEmpty().toSet(),
         )

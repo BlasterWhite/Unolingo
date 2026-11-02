@@ -18,22 +18,20 @@ data class JapaneseCharacter(
     val readings: List<String>,
     /** Other accepted spellings (Kunrei-shiki, IME input such as "nn", kun'yomi with okurigana), never displayed. */
     val alternatives: List<String> = emptyList(),
+    /** Short English meaning for display (first three of [meaningsEn]), null for kana. Also read by `ui/learn`. */
+    val meaning: String? = null,
+    /** Symbols that are easy to confuse with this one, used to pick distractors. */
+    val similar: Set<String> = emptySet(),
     /** School grade of a kanji (1..6, 8 = other jōyō kanji), null for kana. */
     val grade: Int? = null,
     /** English meanings of a kanji (from the TP data), empty for kana. */
     val meaningsEn: List<String> = emptyList(),
     /** Hiragana readings of a kanji, on and kun apart; empty for kana (the symbol itself is the reading). */
     val kanaReadings: KanaReadings = KanaReadings(),
-    /** Symbols that are easy to confuse with this one, used to pick distractors. */
-    val similar: Set<String> = emptySet(),
 ) {
     init {
         require(readings.isNotEmpty()) { "$symbol has no reading" }
     }
-
-    /** Short English meaning for display (first three of [meaningsEn]), null for kana. Kept for `ui/learn`. */
-    val meaning: String?
-        get() = meaningsEn.take(3).joinToString(", ").ifEmpty { null }
 
     val acceptedAnswers: List<String>
         get() = readings + alternatives
