@@ -7,9 +7,20 @@ import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.speech.SpeechPace
 import java.util.Locale
 
 enum class SpeakerStatus { INITIALIZING, READY, MISSING_VOICE, UNAVAILABLE }
+
+/** Speech rates passed to [JapaneseSpeaker.speak]. */
+object SpeechRates {
+    /** Slightly slower than normal, for learners (the quiz pace). */
+    const val DEFAULT = 0.85f
+    const val NORMAL = 1.0f
+    const val SLOW = 0.5f
+
+    fun of(pace: SpeechPace): Float = if (pace == SpeechPace.NORMAL) NORMAL else SLOW
+}
 
 /** Pronounces Japanese text. Call [release] when done. */
 interface JapaneseSpeaker {
@@ -18,8 +29,11 @@ interface JapaneseSpeaker {
     /** True while something is being pronounced. */
     val isSpeaking: StateFlow<Boolean>
 
-    /** Interrupts whatever is being said. Ignored unless [status] is [SpeakerStatus.READY]. */
-    fun speak(text: String)
+    /**
+     * Interrupts whatever is being said. Ignored unless [status] is [SpeakerStatus.READY].
+     * [rate] is the TTS speech rate (1.0 = normal); the default is the quiz's learner pace.
+     */
+    fun speak(text: String, rate: Float = SpeechRates.DEFAULT)
 
     fun release()
 }
@@ -38,7 +52,6 @@ class AndroidJapaneseSpeaker(context: Context) : JapaneseSpeaker {
         // The engine works but has no Japanese voice installed (it can usually be downloaded).
         TextToSpeech.LANG_MISSING_DATA, TextToSpeech.LANG_NOT_SUPPORTED -> SpeakerStatus.MISSING_VOICE
         else -> {
-            tts.setSpeechRate(SPEECH_RATE)
             // Called on a TTS binder thread; MutableStateFlow is thread-safe.
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
@@ -62,8 +75,9 @@ class AndroidJapaneseSpeaker(context: Context) : JapaneseSpeaker {
         }
     }
 
-    override fun speak(text: String) {
+    override fun speak(text: String, rate: Float) {
         if (_status.value != SpeakerStatus.READY) return
+        tts.setSpeechRate(rate)
         if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, text) == TextToSpeech.ERROR) {
             Log.w(TAG, "Cannot speak '$text'")
         }
@@ -76,8 +90,5 @@ class AndroidJapaneseSpeaker(context: Context) : JapaneseSpeaker {
 
     private companion object {
         const val TAG = "JapaneseSpeaker"
-
-        /** Slightly slower than normal, for learners. */
-        const val SPEECH_RATE = 0.85f
     }
 }
