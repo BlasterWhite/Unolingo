@@ -8,7 +8,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import fr.enssat.unolingo.mguezenn_mphongsa.UnolingoApplication
 import fr.enssat.unolingo.mguezenn_mphongsa.data.CharacterRepository
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.kana.KanaConverter
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
@@ -73,14 +72,12 @@ class QuizViewModel(
     private var characters: List<JapaneseCharacter> = emptyList()
     private var session: QuizSession? = null
     private var speaker: JapaneseSpeaker? = null
-    private var kanaConverter: KanaConverter? = null
 
     init {
         viewModelScope.launch {
             try {
                 characters = repository.getCharacters(characterSet)
                 if (speakerFactory != null) {
-                    kanaConverter = KanaConverter(repository.getCharacters(CharacterSet.HIRAGANA))
                     prepareSpeaker()
                 } else {
                     restart()
@@ -128,12 +125,13 @@ class QuizViewModel(
     /** Pronounces the reading of the current "sound → character" question again. */
     fun replay() {
         val question = (_uiState.value as? QuizUiState.Answering)?.question as? Question.SoundToCharacter ?: return
-        speakReading(question.prompt, fallback = question.character.symbol)
+        speakReading(question.character, question.prompt)
     }
 
     /** Pronounces one of the proposals of a "character → sound" question. */
     fun playReading(reading: String) {
-        speakReading(reading, fallback = reading)
+        val question = (_uiState.value as? QuizUiState.Answering)?.question as? Question.CharacterToSound ?: return
+        speakReading(question.character, reading)
     }
 
     /** Checks the voice again, e.g. after the user installed it. No effect unless audio is unavailable. */
@@ -173,12 +171,16 @@ class QuizViewModel(
             question = question,
             feedback = null,
         )
-        if (question is Question.SoundToCharacter) speakReading(question.prompt, fallback = question.character.symbol)
+        if (question is Question.SoundToCharacter) speakReading(question.character, question.prompt)
     }
 
-    /** Speaks [reading] written in hiragana, so the engine says exactly this reading (not another one of a kanji). */
-    private fun speakReading(reading: String, fallback: String) {
-        speaker?.speak(kanaConverter?.toHiragana(reading) ?: fallback)
+    /**
+     * Speaks [reading] (romaji) of [character] as the hiragana reading of the TP data (`kanaReadings`), so the engine
+     * says exactly this reading and not another one of a kanji. The romaji → hiragana `KanaConverter` is no longer
+     * used here: it is greedy and cannot handle っ or ん before a vowel, which kanji readings need.
+     */
+    private fun speakReading(character: JapaneseCharacter, reading: String) {
+        speaker?.speak(character.hiraganaFor(reading) ?: character.symbol)
     }
 
     private fun onLoadError(e: Exception) {

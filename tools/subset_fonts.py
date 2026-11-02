@@ -2,7 +2,7 @@
 
 Klee One covers thousands of kanji (8.9 MB); the app only needs the kana and kanji of its character data, so it
 is subset (allowed by the SIL Open Font License, Klee One declares no Reserved Font Name). Lexend is copied as is.
-Re-run after adding characters to app/src/main/assets/characters/.
+Re-run after changing the TP data files in app/src/main/res/raw/ (kana_data.json, kanji_jouyou.json).
 
 Usage (from the repo root), with the fonts downloaded from https://github.com/google/fonts (ofl/kleeone, ofl/lexend):
     python tools/subset_fonts.py <KleeOne-SemiBold.ttf> <Lexend[wght].ttf>
@@ -16,7 +16,7 @@ from pathlib import Path
 from fontTools import subset
 
 ROOT = Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "app/src/main/assets/characters"
+RAW = ROOT / "app/src/main/res/raw"
 FONT_DIR = ROOT / "app/src/main/res/font"
 
 # Japanese text shown by the UI outside the character data (logo, player seals, decorations).
@@ -25,9 +25,18 @@ UI_TEXT = "うあア日一二"
 
 def japanese_text() -> str:
     chars = set(UI_TEXT)
-    for file in sorted(ASSETS.glob("*.json")):
-        for character in json.loads(file.read_text(encoding="utf-8"))["characters"]:
-            chars.update(character["symbol"])
+    kana = json.loads((RAW / "kana_data.json").read_text(encoding="utf-8"))
+    for script in kana.values():
+        for section in script.values():
+            for line in section.values():
+                for entry in line:
+                    chars.update(entry["char"].replace("я", "や"))  # the TP file writes や with a Cyrillic я
+    kanji = json.loads((RAW / "kanji_jouyou.json").read_text(encoding="utf-8"))
+    for symbol, details in kanji.items():
+        chars.update(symbol)
+        # Readings are displayed in hiragana (TTS) and may be shown, so cover them too.
+        for reading in details["readings_on"] + details["readings_kun"]:
+            chars.update(reading)
     return "".join(sorted(chars))
 
 

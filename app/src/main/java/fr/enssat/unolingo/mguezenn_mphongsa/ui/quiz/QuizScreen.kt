@@ -370,9 +370,12 @@ private fun ChoiceQuestionContent(
     )
 }
 
+private const val MAX_MEANINGS = 3
+
 @Composable
 internal fun MeaningText(character: JapaneseCharacter) {
-    character.meaning?.let {
+    // English meanings come from the TP data (the French ones of the old data files are gone); keep it short.
+    character.meaningsEn.take(MAX_MEANINGS).takeIf { it.isNotEmpty() }?.joinToString(", ")?.let {
         Text(
             text = stringResource(R.string.quiz_meaning, it),
             style = MaterialTheme.typography.bodyLarge,
