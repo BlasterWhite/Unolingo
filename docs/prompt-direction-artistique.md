@@ -46,7 +46,7 @@ Joyeuse, claire et encourageante, avec une inspiration japonaise subtile et mode
    - Barre du haut avec le nom « Unolingo ».
    - « Jeu de caractères » : sélecteur segmenté à 3 options (Hiragana, Katakana, Kanji).
    - « Mode de quiz » : sélecteur segmenté à 2 options (Affichage, Audio), avec le texte « 10 questions par série » ou « 20 questions par série ».
-   - Bouton principal « Commencer » ; boutons secondaires « Statistiques » et « Mode duel ».
+   - Bouton principal « Commencer », puis bouton secondaire « Apprendre : Hiragana » (ouvre l'écran Apprendre du jeu sélectionné) ; boutons secondaires « Statistiques » et « Mode duel ».
    - L'accueil est aujourd'hui très austère : propose une version plus engageante (en-tête illustré, cartes pour les jeux de caractères, mise en avant du duel…) sans ajouter de fonctionnalités.
 
 2. Quiz : éléments communs
@@ -97,6 +97,13 @@ Joyeuse, claire et encourageante, avec une inspiration japonaise subtile et mode
 12. Statistiques : aujourd'hui un simple « Bientôt disponible ». Propose une maquette future : historique des séries, taux de réussite par jeu de caractères, caractères les plus ratés.
 
 13. Icône de l'application : icône adaptative Android (premier plan, arrière-plan, version monochrome pour les icônes thématiques).
+
+14. Apprendre (fiches caractère)
+   - Barre du haut : flèche retour et « Apprendre · Hiragana ». Compteur centré « 12 / 104 » au-dessus de la fiche.
+   - Fiche pleine hauteur (surfaceContainer, bord outlineVariant) : caractère géant (96 sp, Klee One) ; pour un kana, le rōmaji en très grand dessous ; pour un kanji, « Sens : jour, soleil » et « Lectures : nichi / jitsu / hi / ka ».
+   - Rangée du bas : bouton précédent (rond 56 dp, chevron gauche), bouton haut-parleur rond (72 dp, icône pleine pendant la lecture), bouton suivant (chevron droit). Pas de bouclage : précédent est éteint sur la première fiche, suivant sur la dernière. Glisser la fiche change aussi de fiche (transition 280 ms).
+   - Chaque écoute d'une même fiche alterne vitesse normale puis lente.
+   - États : chargement, erreur de chargement, « Voix japonaise manquante » et « Synthèse vocale indisponible » (mêmes écrans que le quiz audio, point 7).
 
 ## Livrables attendus
 

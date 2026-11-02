@@ -15,3 +15,6 @@ data object StatsRoute
 
 @Serializable
 data object BattleRoute
+
+@Serializable
+data class LearnRoute(val characterSet: CharacterSet)
