@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.battle.BattleScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.credits.CreditsScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.learn.LearnScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizScreen
@@ -22,6 +23,7 @@ fun UnolingoNavHost(modifier: Modifier = Modifier) {
                 onLearn = { set -> navController.navigate(LearnRoute(set)) },
                 onOpenStats = { navController.navigate(StatsRoute) },
                 onOpenBattle = { navController.navigate(BattleRoute) },
+                onOpenCredits = { navController.navigate(CreditsRoute) },
             )
         }
         composable<QuizRoute> { entry ->
@@ -40,6 +42,9 @@ fun UnolingoNavHost(modifier: Modifier = Modifier) {
         }
         composable<StatsRoute> {
             StatsScreen(onBack = navController::popBackStack)
+        }
+        composable<CreditsRoute> {
+            CreditsScreen(onBack = navController::popBackStack)
         }
         composable<BattleRoute> {
             BattleScreen(onBack = navController::popBackStack)

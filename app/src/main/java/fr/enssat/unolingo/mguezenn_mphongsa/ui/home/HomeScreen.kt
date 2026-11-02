@@ -25,6 +25,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,10 +63,11 @@ fun HomeScreen(
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenCredits: () -> Unit = {},
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
     val counts by viewModel.characterCounts.collectAsStateWithLifecycle()
-    HomeContent(counts, onStartQuiz, onLearn, onOpenStats, onOpenBattle, modifier)
+    HomeContent(counts, onStartQuiz, onLearn, onOpenStats, onOpenBattle, onOpenCredits, modifier)
 }
 
 @Composable
@@ -75,6 +77,7 @@ private fun HomeContent(
     onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
+    onOpenCredits: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedSet by rememberSaveable { mutableStateOf(CharacterSet.HIRAGANA) }
@@ -149,6 +152,10 @@ private fun HomeContent(
                         .weight(1f)
                         .height(88.dp),
                 )
+            }
+
+            TextButton(onClick = onOpenCredits, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text(stringResource(R.string.home_action_credits))
             }
         }
     }
@@ -312,6 +319,7 @@ private fun HomePreview() {
             onLearn = {},
             onOpenStats = {},
             onOpenBattle = {},
+            onOpenCredits = {},
         )
     }
 }
@@ -320,6 +328,6 @@ private fun HomePreview() {
 @Composable
 private fun HomeDarkPreview() {
     UnolingoTheme(darkTheme = true) {
-        HomeContent(emptyMap(), onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {})
+        HomeContent(emptyMap(), onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
     }
 }

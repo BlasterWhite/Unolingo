@@ -104,4 +104,21 @@
     <string name="action_start">Commencer</string>
     <string name="action_back">Retour</string>
     <string name="coming_soon">Bientôt disponible</string>
+
+    <string name="home_action_credits">À propos · Crédits</string>
+    <string name="credits_title">Crédits</string>
+    <string name="credits_intro">Unolingo est un projet scolaire ENSSAT. Il s\'appuie sur les ressources libres suivantes.</string>
+    <string name="credits_license_label">Licence : %1$s</string>
+    <string name="credits_open_link">Ouvrir le projet</string>
+    <string name="credits_ofl_license">SIL Open Font License 1.1 (texte dans assets/licenses)</string>
+    <string name="credits_kanji_data_name">kanji-data (David Gouveia)</string>
+    <string name="credits_kanji_data_description">Données des kanji (lectures on\'yomi / kun\'yomi, significations, niveaux scolaires), issues du projet GitHub davidluzgouveia/kanji-data.</string>
+    <string name="credits_kanji_data_license">MIT, © 2019 David Gouveia (texte dans assets/licenses)</string>
+    <string name="credits_klee_name">Klee One</string>
+    <string name="credits_klee_description">Police utilisée pour tous les caractères japonais.</string>
+    <string name="credits_lexend_name">Lexend</string>
+    <string name="credits_lexend_description">Police utilisée pour l\'interface et les romaji.</string>
+    <string name="credits_symbols_name">Material Symbols</string>
+    <string name="credits_symbols_description">Icônes de l\'interface, par Google.</string>
+    <string name="credits_symbols_license">Apache 2.0</string>
 </resources>
