@@ -7,7 +7,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -72,6 +79,8 @@ fun LearnScreen(
         onPrevious = viewModel::previous,
         onNext = viewModel::next,
         onSpeak = viewModel::speak,
+        onSelectGrade = viewModel::selectGrade,
+        onSelectReading = viewModel::selectReading,
         onRetryVoice = viewModel::retryVoice,
         onBack = onBack,
         modifier = modifier,
@@ -86,6 +95,8 @@ private fun LearnContent(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onSpeak: () -> Unit,
+    onSelectGrade: (Int?) -> Unit,
+    onSelectReading: (Int) -> Unit,
     onRetryVoice: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -112,7 +123,9 @@ private fun LearnContent(
             }
             LearnUiState.MissingVoice -> MissingVoiceContent(onRetryVoice, contentModifier)
             LearnUiState.SpeechUnavailable -> SpeechUnavailableContent(onRetryVoice, contentModifier)
-            is LearnUiState.Showing -> ShowingContent(uiState, isSpeaking, onPrevious, onNext, onSpeak, contentModifier)
+            is LearnUiState.Showing -> ShowingContent(
+                uiState, isSpeaking, onPrevious, onNext, onSpeak, onSelectGrade, onSelectReading, contentModifier,
+            )
         }
     }
 }
@@ -133,6 +146,8 @@ private fun ShowingContent(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onSpeak: () -> Unit,
+    onSelectGrade: (Int?) -> Unit,
+    onSelectReading: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val distance = with(LocalDensity.current) { 24.dp.roundToPx() }
@@ -141,6 +156,7 @@ private fun ShowingContent(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        if (state.grades.isNotEmpty()) GradeFilter(state.grades, state.selectedGrade, onSelectGrade)
         Text(
             text = stringResource(R.string.learn_progress, state.index + 1, state.characters.size),
             style = MaterialTheme.typography.titleMedium,
@@ -168,7 +184,11 @@ private fun ShowingContent(
                 },
                 label = "learn-card",
             ) { index ->
-                CharacterCard(state.characters[index])
+                CharacterCard(
+                    character = state.characters[index],
+                    selectedReading = state.readingIndex,
+                    onSelectReading = onSelectReading,
+                )
             }
         }
         Row(
@@ -205,12 +225,40 @@ private fun ShowingContent(
     }
 }
 
-/** The character, then its romaji (kana) or its meaning and readings (kanji). */
+/** Jump by grade: "Tous" then one chip per grade, scrolling horizontally. */
 @Composable
-private fun CharacterCard(character: JapaneseCharacter, modifier: Modifier = Modifier) {
+private fun GradeFilter(grades: List<Int>, selected: Int?, onSelect: (Int?) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onSelect(null) },
+            label = { Text(stringResource(R.string.learn_filter_all)) },
+        )
+        grades.forEach { grade ->
+            FilterChip(
+                selected = selected == grade,
+                onClick = { onSelect(grade) },
+                label = { Text(stringResource(R.string.learn_grade, grade)) },
+            )
+        }
+    }
+}
+
+/** The character, then its romaji (kana) or its grade, meaning and readings (kanji). */
+@Composable
+private fun CharacterCard(
+    character: JapaneseCharacter,
+    selectedReading: Int,
+    onSelectReading: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -223,17 +271,82 @@ private fun CharacterCard(character: JapaneseCharacter, modifier: Modifier = Mod
                 textAlign = TextAlign.Center,
             )
         } else {
+            character.grade?.let { GradeBadge(it) }
             Text(
-                text = stringResource(R.string.quiz_meaning, character.meaning),
+                text = stringResource(
+                    R.string.quiz_meaning,
+                    character.meaningsEn.ifEmpty { listOf(character.meaning) }.joinToString(", "),
+                ),
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
             )
-            Text(
-                text = stringResource(R.string.learn_readings, character.readings.joinToString(" / ")),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+            val readings = character.learnReadings()
+            if (readings.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.learn_readings, character.readings.joinToString(" / ")),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                ReadingGroup(R.string.learn_on_yomi, readings, isOn = true, selectedReading, onSelectReading)
+                ReadingGroup(R.string.learn_kun_yomi, readings, isOn = false, selectedReading, onSelectReading)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GradeBadge(grade: Int) {
+    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.secondaryContainer) {
+        Text(
+            text = stringResource(R.string.learn_grade, grade),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+        )
+    }
+}
+
+/** On'yomi or kun'yomi readings: hiragana in Klee One over romaji in Lexend; touching one pronounces it. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReadingGroup(
+    @StringRes label: Int,
+    readings: List<LearnReading>,
+    isOn: Boolean,
+    selectedReading: Int,
+    onSelectReading: (Int) -> Unit,
+) {
+    val group = readings.withIndex().filter { it.value.isOn == isOn }
+    if (group.isEmpty()) return
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = stringResource(label),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            group.forEach { (position, reading) ->
+                val selected = position == selectedReading
+                Surface(
+                    onClick = { onSelectReading(position) },
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        JapaneseText(reading.kana, style = KanaStyles.Compact)
+                        Text(reading.romaji, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
         }
     }
 }
@@ -267,6 +380,8 @@ private fun LearnPreview() {
             onPrevious = {},
             onNext = {},
             onSpeak = {},
+            onSelectGrade = {},
+            onSelectReading = {},
             onRetryVoice = {},
             onBack = {},
         )
