@@ -14,6 +14,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.Question
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionGenerator
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionResult
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuizPool
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuizSession
 import fr.enssat.unolingo.mguezenn_mphongsa.sound.AnswerSoundPlayer
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.AndroidJapaneseSpeaker
@@ -76,7 +77,7 @@ class QuizViewModel(
     init {
         viewModelScope.launch {
             try {
-                characters = repository.getCharacters(characterSet)
+                characters = QuizPool.select(characterSet, repository.getCharacters(characterSet))
                 if (speakerFactory != null) {
                     prepareSpeaker()
                 } else {
