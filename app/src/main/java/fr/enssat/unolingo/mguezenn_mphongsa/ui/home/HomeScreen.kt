@@ -49,6 +49,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceState
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.JapaneseText
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.PlayerSeal
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.PrimaryButton
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.SecondaryButton
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.labelRes
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.seigaiha
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.KanaStyles
@@ -57,19 +58,21 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 @Composable
 fun HomeScreen(
     onStartQuiz: (CharacterSet, QuizMode) -> Unit,
+    onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
     val counts by viewModel.characterCounts.collectAsStateWithLifecycle()
-    HomeContent(counts, onStartQuiz, onOpenStats, onOpenBattle, modifier)
+    HomeContent(counts, onStartQuiz, onLearn, onOpenStats, onOpenBattle, modifier)
 }
 
 @Composable
 private fun HomeContent(
     counts: Map<CharacterSet, Int>,
     onStartQuiz: (CharacterSet, QuizMode) -> Unit,
+    onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
     modifier: Modifier = Modifier,
@@ -128,6 +131,10 @@ private fun HomeContent(
             }
 
             PrimaryButton(stringResource(R.string.action_start), onClick = { onStartQuiz(selectedSet, selectedMode) })
+            SecondaryButton(
+                text = stringResource(R.string.home_action_learn, stringResource(selectedSet.labelRes)),
+                onClick = { onLearn(selectedSet) },
+            )
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 BattleCard(
@@ -302,6 +309,7 @@ private fun HomePreview() {
         HomeContent(
             counts = mapOf(CharacterSet.HIRAGANA to 104, CharacterSet.KATAKANA to 104, CharacterSet.KANJI to 49),
             onStartQuiz = { _, _ -> },
+            onLearn = {},
             onOpenStats = {},
             onOpenBattle = {},
         )
@@ -312,6 +320,6 @@ private fun HomePreview() {
 @Composable
 private fun HomeDarkPreview() {
     UnolingoTheme(darkTheme = true) {
-        HomeContent(emptyMap(), onStartQuiz = { _, _ -> }, onOpenStats = {}, onOpenBattle = {})
+        HomeContent(emptyMap(), onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {})
     }
 }

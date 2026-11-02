@@ -87,6 +87,16 @@
     <string name="battle_quit_title">Quitter le duel ?</string>
     <string name="battle_quit_message">La partie en cours sera perdue.</string>
 
+    <string name="home_action_learn">Apprendre : %1$s</string>
+
+    <string name="learn_title">Apprendre · %1$s</string>
+    <string name="learn_progress">%1$d / %2$d</string>
+    <string name="learn_action_previous">Fiche précédente</string>
+    <string name="learn_action_next">Fiche suivante</string>
+    <string name="learn_action_listen">Écouter</string>
+    <string name="learn_readings">Lectures : %1$s</string>
+    <string name="learn_reading">Lecture : %1$s</string>
+
     <string name="action_start">Commencer</string>
     <string name="action_back">Retour</string>
     <string name="coming_soon">Bientôt disponible</string>
