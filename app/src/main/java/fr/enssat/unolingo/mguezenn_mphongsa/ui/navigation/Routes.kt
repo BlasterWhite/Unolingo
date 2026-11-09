@@ -7,6 +7,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object HomeRoute
 
+/** Quiz settings; [characterSet] is the home's selection, the other settings are remembered. */
+@Serializable
+data class QuizSetupRoute(val characterSet: CharacterSet)
+
 @Serializable
 data class QuizRoute(val config: QuizConfig)
 

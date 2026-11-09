@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -34,12 +35,16 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceTestTag
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.Hanamaru
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.learn.LearnScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.navigation.UnolingoNavHost
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizActions
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizContent
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizUiState
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizViewModel
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupSettings
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,7 +88,7 @@ class ScreenshotTest {
 
     @Test
     fun home() {
-        show { HomeScreen(onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home")
     }
@@ -91,9 +96,41 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "+night")
     fun homeDark() {
-        show { HomeScreen(onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home-dark")
+    }
+
+    @Test
+    fun quizSetup_kanaAndKanji() {
+        var settings by mutableStateOf(QuizSetupSettings())
+        var started: QuizConfig? = null
+        show { QuizSetupScreen(settings, { settings = it }, { started = it }, onBack = {}) }
+        waitForText("Réglages du quiz")
+        capture("quiz-setup-kana")
+        compose.onAllNodesWithText("Kanji").onFirst().performClick()
+        waitForText("Kanji jusqu'au grade 2 · 240 kanji")
+        compose.onAllNodesWithText("Sens → caractère").onFirst().performClick()
+        compose.onAllNodesWithText("Aide").onFirst().performClick()
+        capture("quiz-setup-kanji")
+        compose.onAllNodesWithText("Commencer").onFirst().performClick()
+        assertEquals(QuizConfig(CharacterSet.KANJI, QuestionKind.MEANING_TO_CHARACTER, help = true, grade = 2), started)
+    }
+
+    /** Through the real nav host: the home's set is preselected, and the setup screen can still change it. */
+    @Test
+    fun quizSetup_fromHome_setCanBeChanged() {
+        show { UnolingoNavHost() }
+        waitForText("2136 car.")
+        compose.onAllNodesWithText("Kanji").onFirst().performClick()
+        compose.onAllNodesWithText("Commencer").onFirst().performClick()
+        waitForText("Réglages du quiz")
+        waitForText("Grade des kanji")
+        compose.onAllNodesWithText("Katakana").onFirst().performClick()
+        compose.waitForIdle()
+        compose.onAllNodesWithText("Grade des kanji").assertCountEquals(0)
+        compose.onAllNodesWithText("Kanji").onFirst().performClick()
+        waitForText("Grade des kanji")
     }
 
     /** Lets the quiz's 2 s delay elapse (the view model's scope runs on the main looper). */
