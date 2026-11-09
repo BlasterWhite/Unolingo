@@ -23,6 +23,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.speech.JapaneseSpeaker
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeakerStatus
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeechRates
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,13 +43,17 @@ sealed interface QuizUiState {
     /** Audio mode: no usable text-to-speech engine. */
     data object SpeechUnavailable : QuizUiState
 
-    /** [number] is 1-based. [feedback] is set once the current question has been answered. */
+    /**
+     * [number] is 1-based. [feedback] is set once the current question has been answered. [outcomes] has one entry per
+     * question: true = right, false = wrong, null = not answered yet.
+     */
     data class Answering(
         val number: Int,
         val total: Int,
         val score: Int,
         val question: Question,
         val feedback: QuestionResult?,
+        val outcomes: List<Boolean?> = List(total) { null },
     ) : QuizUiState
 
     data class Finished(val score: Int, val total: Int, val mistakes: List<QuestionResult>) : QuizUiState
@@ -70,6 +75,9 @@ class QuizViewModel(
     private val _isSpeaking = MutableStateFlow(false)
     val isSpeaking: StateFlow<Boolean> = _isSpeaking.asStateFlow()
     private var speakingJob: Job? = null
+
+    /** Pending move to the next question after an answer; cancelled by [restart] and with the view model's scope. */
+    private var advanceJob: Job? = null
 
     private var characters: List<JapaneseCharacter> = emptyList()
     private var session: QuizSession? = null
@@ -100,6 +108,7 @@ class QuizViewModel(
     /** Starts a new series with freshly drawn questions. */
     fun restart() {
         if (characters.isEmpty()) return
+        advanceJob?.cancel()
         val newSession = QuizSession(generator.generate(characters, config))
         session = newSession
         showCurrentQuestion(newSession)
@@ -112,11 +121,16 @@ class QuizViewModel(
         val updated = current.submit(answer)
         session = updated
         val result = updated.results.last()
-        _uiState.value = state.copy(score = updated.score, feedback = result)
+        _uiState.value = state.copy(score = updated.score, feedback = result, outcomes = outcomesOf(updated))
         answerSounds?.play(result.isCorrect)
+        // The delay lives here, not in the UI: a rotation recreates the screen but neither restarts nor replays it.
+        advanceJob = viewModelScope.launch {
+            delay(NEXT_QUESTION_DELAY_MILLIS)
+            next()
+        }
     }
 
-    fun next() {
+    private fun next() {
         val current = session ?: return
         if (current.isFinished) {
             _uiState.value = QuizUiState.Finished(
@@ -177,6 +191,7 @@ class QuizViewModel(
             score = session.score,
             question = question,
             feedback = null,
+            outcomes = outcomesOf(session),
         )
         when {
             question is Question.SoundToCharacter -> speakReading(question.character, question.prompt)
@@ -196,6 +211,9 @@ class QuizViewModel(
         speaker?.speak(text, SpeechRates.of(rateAlternator.next(text)))
     }
 
+    private fun outcomesOf(session: QuizSession): List<Boolean?> =
+        List(session.questions.size) { session.results.getOrNull(it)?.isCorrect }
+
     private fun onLoadError(e: Exception) {
         Log.e(TAG, "Cannot load ${config.characterSet} characters", e)
         _uiState.value = QuizUiState.LoadError
@@ -204,6 +222,9 @@ class QuizViewModel(
     companion object {
         private const val TAG = "QuizViewModel"
         private const val SPEAKER_INIT_TIMEOUT_MILLIS = 5_000L
+
+        /** Time the right answer stays visible before the next question appears; taps are ignored meanwhile. */
+        const val NEXT_QUESTION_DELAY_MILLIS = 2_000L
 
         fun factory(config: QuizConfig) = viewModelFactory {
             initializer {

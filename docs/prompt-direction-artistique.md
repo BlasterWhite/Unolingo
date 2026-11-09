@@ -51,10 +51,10 @@ Joyeuse, claire et encourageante, avec une inspiration japonaise subtile et mode
 
 2. Quiz : éléments communs
    - Barre du haut : flèche retour et nom du jeu (« Hiragana »).
-   - Ligne « Question 3 / 10 » à gauche et « Score : 2 » à droite, puis une barre de progression linéaire.
+   - Ligne « Question 3 / 10 » à gauche et « Score : 2 » à droite, puis une rangée de 10 pastilles rondes, une par question : bonne réponse = ◯ sur `primaryContainer`, mauvaise = ✕ sur `errorContainer`, pas encore répondue = pastille vide ; la question en cours a un anneau `primary` épais. Le statut ne repose jamais sur la couleur seule (◯/✕, et description d'accessibilité « Question 4 : correcte »). Remplace l'ancienne barre de progression linéaire.
    - Consigne en titre (« Quelle est la lecture de ce caractère ? », « Quel caractère se lit ainsi ? », « Quel caractère entendez-vous ? », « Quelle est la bonne prononciation ? »).
-   - Pour les kanji, une ligne secondaire « Sens : jour, soleil ».
-   - Après la réponse, une carte de correction pleine largeur : « Bonne réponse ! » (couleurs primaryContainer) ou « Raté ! » (errorContainer), avec le détail « 日 se lit : nichi / jitsu / hi / ka ». Puis un bouton « Question suivante » ou « Voir le résultat ».
+   - Avec l'aide activée : un texte d'aide discret (`bodyMedium`, `onSurfaceVariant`) sous la consigne, par exemple « Aide : あ ↔ ア » ou, pour un kanji, le sens et/ou les lectures.
+   - Après la réponse : le bouton choisi prend ◯ (juste) ou ✕ (faux) et la bonne réponse est révélée sur son bouton ; la pastille de la question prend son statut. Pas de carte de correction ni de bouton « Suivant » : la question suivante apparaît d'elle-même 2 s plus tard (les appuis sont ignorés pendant ce délai ; après la dernière question, l'écran de résultat apparaît de la même façon).
 
 3. Question « caractère → rōmaji » (mode affichage)
    - Caractère géant (96 sp), champ de texte « Lecture en rōmaji » (clavier ouvert), bouton « Valider ».
