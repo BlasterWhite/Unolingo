@@ -45,9 +45,16 @@ Joyeuse, claire et encourageante, avec une inspiration japonaise subtile et mode
 1. Accueil
    - Barre du haut avec le nom « Unolingo ».
    - « Jeu de caractères » : sélecteur segmenté à 3 options (Hiragana, Katakana, Kanji).
-   - « Mode de quiz » : sélecteur segmenté à 2 options (Affichage, Audio), avec le texte « 10 questions par série » ou « 20 questions par série ».
-   - Bouton principal « Commencer », puis bouton secondaire « Apprendre : Hiragana » (ouvre l'écran Apprendre du jeu sélectionné) ; boutons secondaires « Statistiques » et « Mode duel ».
+   - Bouton principal « Commencer » (ouvre les réglages du quiz, point 1 bis), puis bouton secondaire « Apprendre : Hiragana » (ouvre l'écran Apprendre du jeu sélectionné) ; boutons secondaires « Statistiques » et « Mode duel ».
    - L'accueil est aujourd'hui très austère : propose une version plus engageante (en-tête illustré, cartes pour les jeux de caractères, mise en avant du duel…) sans ajouter de fonctionnalités.
+
+1 bis. Réglages du quiz (après « Commencer »)
+   - Barre du haut : flèche retour et « Réglages du quiz ».
+   - « Jeu de caractères » : sélecteur segmenté (Hiragana, Katakana, Kanji), préselectionné d'après l'accueil.
+   - « Type de question » : boutons de choix pleine largeur (56 dp), l'actif en état sélectionné. Kana : « Caractère → lecture », « Lecture → caractère », « Mélange ». Kanji : ces deux-là, « Caractère → sens », « Sens → caractère » et « Mélange ».
+   - « Grade des kanji » (kanji seulement) : rangée défilante de puces 1 à 6 et 8, puis « Kanji jusqu'au grade 2 · 240 kanji ».
+   - « Options » : deux lignes avec interrupteur, « Aide » et « Synthèse vocale » (icône haut-parleur). Si la voix japonaise manque, un encadré `errorContainer` sous l'interrupteur explique le problème et propose « Installer la voix japonaise ».
+   - Texte « 10 questions par série » et bouton principal « Commencer ». Les derniers réglages sont conservés d'une ouverture à l'autre.
 
 2. Quiz : éléments communs
    - Barre du haut : flèche retour et nom du jeu (« Hiragana »).

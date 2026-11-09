@@ -20,9 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,7 +41,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import fr.enssat.unolingo.mguezenn_mphongsa.R
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.battle.Player
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceButton
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceState
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.JapaneseText
@@ -58,7 +54,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 
 @Composable
 fun HomeScreen(
-    onStartQuiz: (QuizConfig) -> Unit,
+    onOpenQuizSetup: (CharacterSet) -> Unit,
     onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
@@ -67,13 +63,13 @@ fun HomeScreen(
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
     val counts by viewModel.characterCounts.collectAsStateWithLifecycle()
-    HomeContent(counts, onStartQuiz, onLearn, onOpenStats, onOpenBattle, onOpenCredits, modifier)
+    HomeContent(counts, onOpenQuizSetup, onLearn, onOpenStats, onOpenBattle, onOpenCredits, modifier)
 }
 
 @Composable
 private fun HomeContent(
     counts: Map<CharacterSet, Int>,
-    onStartQuiz: (QuizConfig) -> Unit,
+    onOpenQuizSetup: (CharacterSet) -> Unit,
     onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
@@ -81,8 +77,6 @@ private fun HomeContent(
     modifier: Modifier = Modifier,
 ) {
     var selectedSet by rememberSaveable { mutableStateOf(CharacterSet.HIRAGANA) }
-    // Temporary until the settings screen: the home only chooses visual or audio (tts); the rest is the default config.
-    var audio by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(modifier = modifier) { innerPadding ->
         Column(
@@ -111,30 +105,7 @@ private fun HomeContent(
                 }
             }
 
-            Text(stringResource(R.string.home_choose_mode), style = MaterialTheme.typography.titleMedium)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(R.string.mode_display to false, R.string.mode_audio to true).forEachIndexed { index, (label, isAudio) ->
-                        SegmentedButton(
-                            selected = isAudio == audio,
-                            onClick = { audio = isAudio },
-                            shape = SegmentedButtonDefaults.itemShape(index, 2),
-                            modifier = Modifier.height(52.dp),
-                        ) { Text(stringResource(label), style = MaterialTheme.typography.titleMedium) }
-                    }
-                }
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.home_question_count,
-                        QuizConfig.QUESTION_COUNT,
-                        QuizConfig.QUESTION_COUNT,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            PrimaryButton(stringResource(R.string.action_start), onClick = { onStartQuiz(QuizConfig(selectedSet, tts = audio)) })
+            PrimaryButton(stringResource(R.string.action_start), onClick = { onOpenQuizSetup(selectedSet) })
             SecondaryButton(
                 text = stringResource(R.string.home_action_learn, stringResource(selectedSet.labelRes)),
                 onClick = { onLearn(selectedSet) },
@@ -316,7 +287,7 @@ private fun HomePreview() {
     UnolingoTheme {
         HomeContent(
             counts = mapOf(CharacterSet.HIRAGANA to 104, CharacterSet.KATAKANA to 104, CharacterSet.KANJI to 49),
-            onStartQuiz = {},
+            onOpenQuizSetup = {},
             onLearn = {},
             onOpenStats = {},
             onOpenBattle = {},
@@ -329,6 +300,6 @@ private fun HomePreview() {
 @Composable
 private fun HomeDarkPreview() {
     UnolingoTheme(darkTheme = true) {
-        HomeContent(emptyMap(), onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
+        HomeContent(emptyMap(), onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
     }
 }

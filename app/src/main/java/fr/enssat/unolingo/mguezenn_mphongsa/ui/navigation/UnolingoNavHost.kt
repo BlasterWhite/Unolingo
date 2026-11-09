@@ -1,6 +1,10 @@
 package fr.enssat.unolingo.mguezenn_mphongsa.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -11,19 +15,34 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.credits.CreditsScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.learn.LearnScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupSettings
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.StatsScreen
 
 @Composable
 fun UnolingoNavHost(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
+    // Last quiz settings, kept while the app lives (and across rotation / process death).
+    var setupSettings by rememberSaveable(stateSaver = QuizSetupSettings.Saver) { mutableStateOf(QuizSetupSettings()) }
     NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
         composable<HomeRoute> {
             HomeScreen(
-                onStartQuiz = { config -> navController.navigate(QuizRoute(config)) },
+                onOpenQuizSetup = { set -> navController.navigate(QuizSetupRoute(set)) },
                 onLearn = { set -> navController.navigate(LearnRoute(set)) },
                 onOpenStats = { navController.navigate(StatsRoute) },
                 onOpenBattle = { navController.navigate(BattleRoute) },
                 onOpenCredits = { navController.navigate(CreditsRoute) },
+            )
+        }
+        composable<QuizSetupRoute> { entry ->
+            val set = entry.toRoute<QuizSetupRoute>().characterSet
+            // The home's set wins on arrival; the other choices are the remembered ones.
+            val settings = if (setupSettings.characterSet == set) setupSettings else setupSettings.withSet(set)
+            QuizSetupScreen(
+                settings = settings,
+                onSettingsChange = { setupSettings = it },
+                onStart = { config -> navController.navigate(QuizRoute(config)) },
+                onBack = navController::popBackStack,
             )
         }
         composable<QuizRoute>(typeMap = QuizRouteTypeMap) { entry ->

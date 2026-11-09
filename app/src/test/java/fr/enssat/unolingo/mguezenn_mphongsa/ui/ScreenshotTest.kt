@@ -39,7 +39,10 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizContent
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizUiState
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizViewModel
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupSettings
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,7 +86,7 @@ class ScreenshotTest {
 
     @Test
     fun home() {
-        show { HomeScreen(onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home")
     }
@@ -91,9 +94,25 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "+night")
     fun homeDark() {
-        show { HomeScreen(onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home-dark")
+    }
+
+    @Test
+    fun quizSetup_kanaAndKanji() {
+        var settings by mutableStateOf(QuizSetupSettings())
+        var started: QuizConfig? = null
+        show { QuizSetupScreen(settings, { settings = it }, { started = it }, onBack = {}) }
+        waitForText("Réglages du quiz")
+        capture("quiz-setup-kana")
+        compose.onAllNodesWithText("Kanji").onFirst().performClick()
+        waitForText("Kanji jusqu'au grade 2 · 240 kanji")
+        compose.onAllNodesWithText("Sens → caractère").onFirst().performClick()
+        compose.onAllNodesWithText("Aide").onFirst().performClick()
+        capture("quiz-setup-kanji")
+        compose.onAllNodesWithText("Commencer").onFirst().performClick()
+        assertEquals(QuizConfig(CharacterSet.KANJI, QuestionKind.MEANING_TO_CHARACTER, help = true, grade = 2), started)
     }
 
     /** Lets the quiz's 2 s delay elapse (the view model's scope runs on the main looper). */

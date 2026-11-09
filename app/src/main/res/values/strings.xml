@@ -10,8 +10,6 @@
     <string name="kind_character_to_meaning">Caractère → sens</string>
     <string name="kind_meaning_to_character">Sens → caractère</string>
     <string name="kind_mix">Mélange</string>
-    <string name="mode_display">Affichage</string>
-    <string name="mode_audio">Audio</string>
 
     <string name="home_hero_eyebrow">ENTRAÎNEMENT</string>
     <string name="home_hero_title">Prêt·e pour quelques caractères ?</string>
@@ -21,11 +19,28 @@
     </plurals>
     <string name="home_battle_subtitle">À deux, sur ce téléphone</string>
     <string name="home_choose_set">Jeu de caractères</string>
-    <string name="home_choose_mode">Mode de quiz</string>
     <plurals name="home_question_count">
         <item quantity="one">%d question par série</item>
         <item quantity="other">%d questions par série</item>
     </plurals>
+
+    <string name="setup_title">Réglages du quiz</string>
+    <string name="setup_section_set">Jeu de caractères</string>
+    <string name="setup_section_kind">Type de question</string>
+    <string name="setup_section_grade">Grade des kanji</string>
+    <string name="setup_section_options">Options</string>
+    <string name="setup_grade_summary">Kanji jusqu\'au grade %1$d</string>
+    <string name="setup_grade_summary_count">Kanji jusqu\'au grade %1$d · %2$s</string>
+    <plurals name="setup_kanji_count">
+        <item quantity="one">%d kanji</item>
+        <item quantity="other">%d kanji</item>
+    </plurals>
+    <string name="setup_help_title">Aide</string>
+    <string name="setup_help_description">Affiche un indice sous chaque question.</string>
+    <string name="setup_tts_title">Synthèse vocale</string>
+    <string name="setup_tts_description">Les lectures sont prononcées au lieu d\'être affichées.</string>
+    <string name="setup_voice_missing">Ce téléphone n\'a pas de voix japonaise. Installez-la pour entendre les questions.</string>
+    <string name="setup_voice_unavailable">Aucun moteur de synthèse vocale utilisable n\'a été trouvé sur cet appareil.</string>
 
     <string name="quiz_loading">Chargement des caractères…</string>
     <string name="quiz_speaking">Lecture…</string>
