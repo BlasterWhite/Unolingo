@@ -19,18 +19,16 @@ fun UnolingoNavHost(modifier: Modifier = Modifier) {
     NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
         composable<HomeRoute> {
             HomeScreen(
-                onStartQuiz = { set, mode -> navController.navigate(QuizRoute(set, mode)) },
+                onStartQuiz = { config -> navController.navigate(QuizRoute(config)) },
                 onLearn = { set -> navController.navigate(LearnRoute(set)) },
                 onOpenStats = { navController.navigate(StatsRoute) },
                 onOpenBattle = { navController.navigate(BattleRoute) },
                 onOpenCredits = { navController.navigate(CreditsRoute) },
             )
         }
-        composable<QuizRoute> { entry ->
-            val route = entry.toRoute<QuizRoute>()
+        composable<QuizRoute>(typeMap = QuizRouteTypeMap) { entry ->
             QuizScreen(
-                characterSet = route.characterSet,
-                mode = route.mode,
+                config = entry.toRoute<QuizRoute>().config,
                 onBack = navController::popBackStack,
             )
         }

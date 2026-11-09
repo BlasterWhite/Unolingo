@@ -44,7 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import fr.enssat.unolingo.mguezenn_mphongsa.R
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.battle.Player
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceButton
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceState
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.JapaneseText
@@ -58,7 +58,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 
 @Composable
 fun HomeScreen(
-    onStartQuiz: (CharacterSet, QuizMode) -> Unit,
+    onStartQuiz: (QuizConfig) -> Unit,
     onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
@@ -73,7 +73,7 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     counts: Map<CharacterSet, Int>,
-    onStartQuiz: (CharacterSet, QuizMode) -> Unit,
+    onStartQuiz: (QuizConfig) -> Unit,
     onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
     onOpenBattle: () -> Unit,
@@ -81,7 +81,8 @@ private fun HomeContent(
     modifier: Modifier = Modifier,
 ) {
     var selectedSet by rememberSaveable { mutableStateOf(CharacterSet.HIRAGANA) }
-    var selectedMode by rememberSaveable { mutableStateOf(QuizMode.DISPLAY) }
+    // Temporary until the settings screen: the home only chooses visual or audio (tts); the rest is the default config.
+    var audio by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(modifier = modifier) { innerPadding ->
         Column(
@@ -113,27 +114,27 @@ private fun HomeContent(
             Text(stringResource(R.string.home_choose_mode), style = MaterialTheme.typography.titleMedium)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    QuizMode.entries.forEachIndexed { index, mode ->
+                    listOf(R.string.mode_display to false, R.string.mode_audio to true).forEachIndexed { index, (label, isAudio) ->
                         SegmentedButton(
-                            selected = mode == selectedMode,
-                            onClick = { selectedMode = mode },
-                            shape = SegmentedButtonDefaults.itemShape(index, QuizMode.entries.size),
+                            selected = isAudio == audio,
+                            onClick = { audio = isAudio },
+                            shape = SegmentedButtonDefaults.itemShape(index, 2),
                             modifier = Modifier.height(52.dp),
-                        ) { Text(stringResource(mode.labelRes), style = MaterialTheme.typography.titleMedium) }
+                        ) { Text(stringResource(label), style = MaterialTheme.typography.titleMedium) }
                     }
                 }
                 Text(
                     text = pluralStringResource(
                         R.plurals.home_question_count,
-                        selectedMode.questionCount,
-                        selectedMode.questionCount,
+                        QuizConfig.QUESTION_COUNT,
+                        QuizConfig.QUESTION_COUNT,
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
-            PrimaryButton(stringResource(R.string.action_start), onClick = { onStartQuiz(selectedSet, selectedMode) })
+            PrimaryButton(stringResource(R.string.action_start), onClick = { onStartQuiz(QuizConfig(selectedSet, tts = audio)) })
             SecondaryButton(
                 text = stringResource(R.string.home_action_learn, stringResource(selectedSet.labelRes)),
                 onClick = { onLearn(selectedSet) },
@@ -315,7 +316,7 @@ private fun HomePreview() {
     UnolingoTheme {
         HomeContent(
             counts = mapOf(CharacterSet.HIRAGANA to 104, CharacterSet.KATAKANA to 104, CharacterSet.KANJI to 49),
-            onStartQuiz = { _, _ -> },
+            onStartQuiz = {},
             onLearn = {},
             onOpenStats = {},
             onOpenBattle = {},
@@ -328,6 +329,6 @@ private fun HomePreview() {
 @Composable
 private fun HomeDarkPreview() {
     UnolingoTheme(darkTheme = true) {
-        HomeContent(emptyMap(), onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
+        HomeContent(emptyMap(), onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
     }
 }

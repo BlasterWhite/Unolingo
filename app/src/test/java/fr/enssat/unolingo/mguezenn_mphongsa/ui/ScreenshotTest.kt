@@ -20,7 +20,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuestionKind
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.battle.BattleScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceTestTag
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.Hanamaru
@@ -64,18 +65,12 @@ class ScreenshotTest {
 
     /** Answers the current question: types a reading if there is a text field, else picks the first choice. */
     private fun answerCurrentQuestion() {
-        val fields = compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes()
-        if (fields.isNotEmpty()) {
-            compose.onAllNodes(hasSetTextAction()).onFirst().performTextInput("ka")
-            compose.onAllNodesWithText("Valider").onFirst().performClick()
-        } else {
-            compose.onAllNodesWithTag(ChoiceTestTag).onFirst().performClick()
-        }
+        compose.onAllNodesWithTag(ChoiceTestTag).onFirst().performClick()
     }
 
     @Test
     fun home() {
-        show { HomeScreen(onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home")
     }
@@ -83,14 +78,14 @@ class ScreenshotTest {
     @Test
     @Config(qualifiers = "+night")
     fun homeDark() {
-        show { HomeScreen(onStartQuiz = { _, _ -> }, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
+        show { HomeScreen(onStartQuiz = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home-dark")
     }
 
     @Test
     fun displayQuiz_questionFeedbackAndResult() {
-        show { QuizScreen(CharacterSet.HIRAGANA, QuizMode.DISPLAY, onBack = {}) }
+        show { QuizScreen(QuizConfig(CharacterSet.HIRAGANA, help = true), onBack = {}) }
         waitForText("Question 1 / 10")
         capture("quiz-question")
         answerCurrentQuestion()
@@ -106,18 +101,27 @@ class ScreenshotTest {
 
     @Test
     fun kanjiQuiz() {
-        show { QuizScreen(CharacterSet.KANJI, QuizMode.DISPLAY, onBack = {}) }
+        show { QuizScreen(QuizConfig(CharacterSet.KANJI, help = true), onBack = {}) }
         waitForText("Question 1 / 10")
         answerCurrentQuestion()
         capture("quiz-kanji-feedback")
     }
 
     @Test
+    fun kanjiMeaningQuiz() {
+        show { QuizScreen(QuizConfig(CharacterSet.KANJI, QuestionKind.CHARACTER_TO_MEANING, help = true), onBack = {}) }
+        waitForText("Question 1 / 10")
+        capture("quiz-kanji-meaning")
+        answerCurrentQuestion()
+        capture("quiz-kanji-meaning-feedback")
+    }
+
+    @Test
     fun audioQuiz() {
-        show { QuizScreen(CharacterSet.KATAKANA, QuizMode.AUDIO, onBack = {}) }
+        show { QuizScreen(QuizConfig(CharacterSet.KATAKANA, tts = true), onBack = {}) }
         // Robolectric has no real TTS engine: depending on its shadow, this shows the questions or an audio error.
         compose.waitUntil(10_000) {
-            listOf("Question 1 / 20", "Réessayer").any { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
+            listOf("Question 1 / 10", "Réessayer").any { compose.onAllNodesWithText(it).fetchSemanticsNodes().isNotEmpty() }
         }
         capture("quiz-audio")
     }

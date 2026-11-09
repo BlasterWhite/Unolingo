@@ -5,6 +5,11 @@
     <string name="set_katakana">Katakana</string>
     <string name="set_kanji">Kanji</string>
 
+    <string name="kind_character_to_reading">Caractère → lecture</string>
+    <string name="kind_reading_to_character">Lecture → caractère</string>
+    <string name="kind_character_to_meaning">Caractère → sens</string>
+    <string name="kind_meaning_to_character">Sens → caractère</string>
+    <string name="kind_mix">Mélange</string>
     <string name="mode_display">Affichage</string>
     <string name="mode_audio">Audio</string>
 
@@ -29,6 +34,8 @@
     <string name="quiz_score">Score : %1$d</string>
     <string name="quiz_prompt_reading">Quelle est la lecture de ce caractère ?</string>
     <string name="quiz_prompt_character">Quel caractère se lit ainsi ?</string>
+    <string name="quiz_prompt_meaning">Quel est le sens de ce caractère ?</string>
+    <string name="quiz_prompt_character_meaning">Quel caractère a ce sens ?</string>
     <string name="quiz_prompt_sound">Quel caractère entendez-vous ?</string>
     <string name="quiz_prompt_pronunciation">Quelle est la bonne prononciation ?</string>
     <string name="quiz_action_replay">Réécouter</string>
@@ -41,7 +48,7 @@
     <string name="quiz_tts_unavailable_message">Aucun moteur de synthèse vocale utilisable n\'a été trouvé sur cet appareil.</string>
     <string name="quiz_action_retry">Réessayer</string>
     <string name="quiz_meaning">Sens : %1$s</string>
-    <string name="quiz_answer_label">Lecture en rōmaji</string>
+    <string name="quiz_help">Aide : %1$s</string>
     <string name="quiz_action_validate">Valider</string>
     <string name="quiz_action_next">Question suivante</string>
     <string name="quiz_action_see_result">Voir le résultat</string>

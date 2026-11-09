@@ -8,9 +8,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import fr.enssat.unolingo.mguezenn_mphongsa.UnolingoApplication
 import fr.enssat.unolingo.mguezenn_mphongsa.data.CharacterRepository
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.Question
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionGenerator
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionResult
@@ -55,10 +54,9 @@ sealed interface QuizUiState {
     data class Finished(val score: Int, val total: Int, val mistakes: List<QuestionResult>) : QuizUiState
 }
 
-/** [speakerFactory] is only needed for modes with audio questions. */
+/** [speakerFactory] is only needed when [QuizConfig.tts] is on. */
 class QuizViewModel(
-    private val characterSet: CharacterSet,
-    private val mode: QuizMode,
+    private val config: QuizConfig,
     private val repository: CharacterRepository,
     private val answerSounds: AnswerSoundPlayer? = null,
     private val speakerFactory: (() -> JapaneseSpeaker)? = null,
@@ -84,7 +82,7 @@ class QuizViewModel(
     init {
         viewModelScope.launch {
             try {
-                characters = QuizPool.select(characterSet, repository.getCharacters(characterSet))
+                characters = QuizPool.select(config, repository.getCharacters(config.characterSet))
                 spokenReadings = SpokenReadings(characters)
                 if (speakerFactory != null) {
                     prepareSpeaker()
@@ -102,7 +100,7 @@ class QuizViewModel(
     /** Starts a new series with freshly drawn questions. */
     fun restart() {
         if (characters.isEmpty()) return
-        val newSession = QuizSession(generator.generate(characters, mode))
+        val newSession = QuizSession(generator.generate(characters, config))
         session = newSession
         showCurrentQuestion(newSession)
     }
@@ -180,7 +178,12 @@ class QuizViewModel(
             question = question,
             feedback = null,
         )
-        if (question is Question.SoundToCharacter) speakReading(question.character, question.prompt)
+        when {
+            question is Question.SoundToCharacter -> speakReading(question.character, question.prompt)
+            // Meaning questions stay visual, but with tts the reading of the kanji is said when it is displayed.
+            config.tts && (question is Question.CharacterToMeaning || question is Question.MeaningToCharacter) ->
+                speakReading(question.character, question.character.readings.first())
+        }
     }
 
     /**
@@ -194,7 +197,7 @@ class QuizViewModel(
     }
 
     private fun onLoadError(e: Exception) {
-        Log.e(TAG, "Cannot load $characterSet characters", e)
+        Log.e(TAG, "Cannot load ${config.characterSet} characters", e)
         _uiState.value = QuizUiState.LoadError
     }
 
@@ -202,15 +205,14 @@ class QuizViewModel(
         private const val TAG = "QuizViewModel"
         private const val SPEAKER_INIT_TIMEOUT_MILLIS = 5_000L
 
-        fun factory(characterSet: CharacterSet, mode: QuizMode) = viewModelFactory {
+        fun factory(config: QuizConfig) = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as UnolingoApplication
                 QuizViewModel(
-                    characterSet = characterSet,
-                    mode = mode,
+                    config = config,
                     repository = app.container.characterRepository,
                     answerSounds = app.container.answerSounds,
-                    speakerFactory = if (mode == QuizMode.AUDIO) ({ AndroidJapaneseSpeaker(app) }) else null,
+                    speakerFactory = if (config.tts) ({ AndroidJapaneseSpeaker(app) }) else null,
                 )
             }
         }

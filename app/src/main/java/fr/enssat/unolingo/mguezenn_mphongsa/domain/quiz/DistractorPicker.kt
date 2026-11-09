@@ -34,14 +34,40 @@ internal object DistractorPicker {
         count: Int,
         random: Random,
         bySound: Boolean = false,
+        /** The readings of a character that may be proposed: romaji by default, hiragana for kanji. */
+        readingsOf: (JapaneseCharacter) -> List<String> = { it.readings },
     ): List<String> =
         rank(target, pool, random)
             .filterNot { bySound && soundsAlike(target, it) }
             .mapNotNull { candidate ->
-                candidate.readings.shuffled(random).firstOrNull { !AnswerChecker.acceptsReading(target, it) }
+                readingsOf(candidate).shuffled(random).firstOrNull { !AnswerChecker.acceptsReading(target, it) }
             }
             .distinctBy { AnswerChecker.normalizeRomaji(it) }
             .take(count)
+
+    /**
+     * Wrong kanji for a meaning question on [target] ("kanji → meaning" or "meaning → kanji"): kanji with a meaning
+     * of their own, sharing none of the English meanings of [target] (so no choice could also be right), and no two
+     * with the same displayed meaning.
+     */
+    fun pickByMeaning(
+        target: JapaneseCharacter,
+        pool: List<JapaneseCharacter>,
+        count: Int,
+        random: Random,
+    ): List<JapaneseCharacter> {
+        val targetMeanings = meaningSet(target)
+        return rank(target, pool, random)
+            .filter { it.meaning != null && it.meaning != target.meaning }
+            .filter { candidate -> meaningSet(candidate).none { it in targetMeanings } }
+            .distinctBy { it.meaning }
+            .take(count)
+    }
+
+    private fun meaningSet(character: JapaneseCharacter): Set<String> =
+        character.meaningsEn.ifEmpty { listOfNotNull(character.meaning) }
+            .map { it.trim().lowercase() }
+            .toSet()
 
     /**
      * Two characters can be pronounced the same when they share an accepted answer: を ("wo", also "o") sounds

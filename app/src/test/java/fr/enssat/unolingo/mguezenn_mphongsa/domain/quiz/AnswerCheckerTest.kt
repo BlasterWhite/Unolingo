@@ -12,30 +12,51 @@ class AnswerCheckerTest {
     private val mouth = JapaneseCharacter("口", listOf("kou", "ku", "kuchi"))
 
     @Test
-    fun typedReading_isCaseInsensitiveAndTrimmed() {
-        assertTrue(AnswerChecker.isCorrect(Question.CharacterToRomaji(shi), "  SHI "))
+    fun reading_isCaseInsensitiveAndTrimmed() {
+        assertTrue(AnswerChecker.isCorrect(Question.CharacterToRomajiChoice(shi, listOf("shi", "tsu")), "  SHI "))
     }
 
     @Test
-    fun typedReading_acceptsAlternativeSpelling() {
-        assertTrue(AnswerChecker.isCorrect(Question.CharacterToRomaji(shi), "si"))
+    fun reading_acceptsAlternativeSpelling() {
+        assertTrue(AnswerChecker.isCorrect(Question.CharacterToRomajiChoice(shi, listOf("shi", "tsu")), "si"))
     }
 
     @Test
-    fun typedReading_acceptsAnyKanjiReading() {
-        val question = Question.CharacterToRomaji(sun)
+    fun reading_acceptsAnyKanjiReading() {
+        val question = Question.CharacterToRomajiChoice(sun, listOf("hi", "tsuki"))
         listOf("nichi", "jitsu", "hi", "ka").forEach { assertTrue(it, AnswerChecker.isCorrect(question, it)) }
         assertFalse(AnswerChecker.isCorrect(question, "tsuki"))
     }
 
     @Test
-    fun typedReading_acceptsMacrons() {
-        assertTrue(AnswerChecker.isCorrect(Question.CharacterToRomaji(mouth), "kō"))
+    fun reading_acceptsMacrons() {
+        assertTrue(AnswerChecker.isCorrect(Question.CharacterToRomajiChoice(mouth, listOf("kou", "tsuki")), "kō"))
     }
 
     @Test
     fun blankAnswer_isWrong() {
-        assertFalse(AnswerChecker.isCorrect(Question.CharacterToRomaji(shi), "   "))
+        assertFalse(AnswerChecker.isCorrect(Question.CharacterToRomajiChoice(shi, listOf("shi", "tsu")), "   "))
+    }
+
+    @Test
+    fun reading_inHiraganaIsTheSameAnswerAsItsRomaji() {
+        val question = Question.CharacterToRomajiChoice(mouth, listOf("こう", "つき"))
+        assertTrue(AnswerChecker.isCorrect(question, "こう"))
+        assertTrue(AnswerChecker.isCorrect(question, "くち"))
+        assertFalse(AnswerChecker.isCorrect(question, "つき"))
+        assertEquals("kyouto", AnswerChecker.normalizeRomaji("きょうと"))
+    }
+
+    @Test
+    fun meaningQuestions_areCorrectOnlyForTheTargetKanji() {
+        val water = JapaneseCharacter("水", listOf("sui"), meaning = "water")
+        val fire = JapaneseCharacter("火", listOf("ka"), meaning = "fire")
+        val toMeaning = Question.CharacterToMeaning(water, listOf("water", "fire"))
+        assertTrue(AnswerChecker.isCorrect(toMeaning, "water"))
+        assertFalse(AnswerChecker.isCorrect(toMeaning, "fire"))
+        val toCharacter = Question.MeaningToCharacter(water, "water", listOf(water, fire))
+        assertTrue(AnswerChecker.isCorrect(toCharacter, "水"))
+        assertFalse(AnswerChecker.isCorrect(toCharacter, "火"))
     }
 
     @Test
