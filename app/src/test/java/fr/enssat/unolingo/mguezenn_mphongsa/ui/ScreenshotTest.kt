@@ -44,6 +44,19 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizViewModel
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quizsetup.QuizSetupSettings
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
+import androidx.compose.ui.test.assertContentDescriptionContains
+import androidx.compose.ui.test.onNodeWithTag
+import fr.enssat.unolingo.mguezenn_mphongsa.UnolingoApplication
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.progress.QuizOutcome
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.GradeCardTag
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeContent
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.ProgressChartTag
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.StatsContent
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.StatsUiState
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.gradeSummary
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.statsUiState
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -99,6 +112,86 @@ class ScreenshotTest {
         show { HomeScreen(onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}) }
         waitForText("104 car.")
         capture("home-dark")
+    }
+
+    private fun fakeOutcomes(count: Int) = List(count) { i ->
+        val kanji = i % 3 == 2
+        QuizOutcome(
+            score = (5 + (i * 7) % 6).coerceAtMost(10),
+            total = 10,
+            characterSet = if (kanji) CharacterSet.KANJI else if (i % 2 == 0) CharacterSet.HIRAGANA else CharacterSet.KATAKANA,
+            grade = if (kanji) 1 + (i / 3) % 4 else 1,
+            help = i % 5 == 0,
+            playedAt = 1_760_000_000_000L + i * 86_400_000L,
+        )
+    }
+
+    @Test
+    fun home_withGrade() {
+        show { HomeContent(mapOf(CharacterSet.HIRAGANA to 104), gradeSummary(fakeOutcomes(25)), {}, {}, {}, {}, {}) }
+        compose.onNodeWithTag(GradeCardTag).assertExists()
+        compose.onAllNodesWithText("Votre grade").onFirst().assertExists()
+        capture("home-grade")
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun homeDark_withGrade() {
+        show { HomeContent(emptyMap(), gradeSummary(fakeOutcomes(25)), {}, {}, {}, {}, {}) }
+        capture("home-grade-dark")
+    }
+
+    /** Through the real repository: the card appears and updates live, and a click opens the progress page. */
+    @Test
+    fun home_gradeCardLiveFromRepository_opensStats() {
+        val repository = (compose.activity.application as UnolingoApplication).container.resultsRepository
+        try {
+            show { UnolingoNavHost() }
+            waitForText("Votre grade")
+            runBlocking { repository.insertFake(fakeOutcomes(3)) }
+            waitForText("Fenêtre de calcul : 3 / 20 quiz")
+            compose.onNodeWithTag(GradeCardTag).performClick()
+            waitForText("Progression du grade")
+            compose.onNodeWithTag(ProgressChartTag).assertExists()
+        } finally {
+            runBlocking { repository.deleteFake() }
+        }
+    }
+
+    @Test
+    fun stats_empty() {
+        var started = false
+        show { StatsContent(StatsUiState.Empty, onBack = {}, onStartQuiz = { started = true }) }
+        waitForText("Faites votre premier quiz")
+        compose.onNodeWithTag(ProgressChartTag).assertDoesNotExist()
+        capture("stats-empty")
+        compose.onAllNodesWithText("Commencer un quiz").onFirst().performClick()
+        assertTrue(started)
+    }
+
+    @Test
+    fun stats_withManyQuizzes() {
+        show { StatsContent(statsUiState(fakeOutcomes(25)), onBack = {}, onStartQuiz = {}) }
+        waitForText("Progression du grade")
+        compose.onNodeWithTag(ProgressChartTag).assertContentDescriptionContains("25 points", substring = true)
+        compose.onNodeWithTag(ProgressChartTag).assertContentDescriptionContains("rang actuel", substring = true)
+        capture("stats")
+    }
+
+    @Test
+    @Config(qualifiers = "+night")
+    fun statsDark_withManyQuizzes() {
+        show { StatsContent(statsUiState(fakeOutcomes(25)), onBack = {}, onStartQuiz = {}) }
+        waitForText("Progression du grade")
+        capture("stats-dark")
+    }
+
+    @Test
+    fun stats_singleQuiz() {
+        show { StatsContent(statsUiState(fakeOutcomes(1)), onBack = {}, onStartQuiz = {}) }
+        waitForText("Progression du grade")
+        compose.onNodeWithTag(ProgressChartTag).assertContentDescriptionContains("1 point,", substring = true)
+        capture("stats-one-quiz")
     }
 
     @Test

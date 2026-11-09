@@ -41,6 +41,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import fr.enssat.unolingo.mguezenn_mphongsa.R
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.battle.Player
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.progress.Grade
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.progress.Rank
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceButton
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceState
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.JapaneseText
@@ -49,6 +51,12 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.PrimaryButton
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.SecondaryButton
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.labelRes
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.seigaiha
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.GradeSummary
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.RankProgress
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.RankSeal
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.stats.label
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.progress.GradeConfig
+import androidx.compose.ui.platform.testTag
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.KanaStyles
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 
@@ -63,12 +71,14 @@ fun HomeScreen(
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
     val counts by viewModel.characterCounts.collectAsStateWithLifecycle()
-    HomeContent(counts, onOpenQuizSetup, onLearn, onOpenStats, onOpenBattle, onOpenCredits, modifier)
+    val grade by viewModel.grade.collectAsStateWithLifecycle()
+    HomeContent(counts, grade, onOpenQuizSetup, onLearn, onOpenStats, onOpenBattle, onOpenCredits, modifier)
 }
 
 @Composable
-private fun HomeContent(
+internal fun HomeContent(
     counts: Map<CharacterSet, Int>,
+    grade: GradeSummary?,
     onOpenQuizSetup: (CharacterSet) -> Unit,
     onLearn: (CharacterSet) -> Unit,
     onOpenStats: () -> Unit,
@@ -89,6 +99,7 @@ private fun HomeContent(
         ) {
             AppHeader()
             HeroBanner()
+            grade?.let { GradeCard(it, onClick = onOpenStats) }
 
             Text(stringResource(R.string.home_choose_set), style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -198,6 +209,43 @@ private fun HeroBanner() {
     }
 }
 
+/** "Votre grade" card: rank seal, progress to the next rank and the quizzes counted; opens the progress page. */
+@Composable
+private fun GradeCard(summary: GradeSummary, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    HomeTile(onClick = onClick, modifier = modifier.fillMaxWidth().testTag(GradeCardTag)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            RankSeal(summary.grade.rank, size = 64.dp)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.grade_current),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(summary.grade.rank.label(), style = MaterialTheme.typography.titleLarge)
+                RankProgress(summary.grade)
+                Text(
+                    text = if (summary.windowCount == 0) {
+                        stringResource(R.string.grade_no_quiz)
+                    } else {
+                        stringResource(R.string.grade_window_count, summary.windowCount, GradeConfig.WINDOW_SIZE)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null)
+        }
+    }
+}
+
+const val GradeCardTag = "gradeCard"
+
 @Composable
 private fun CharacterSetCard(
     set: CharacterSet,
@@ -287,6 +335,7 @@ private fun HomePreview() {
     UnolingoTheme {
         HomeContent(
             counts = mapOf(CharacterSet.HIRAGANA to 104, CharacterSet.KATAKANA to 104, CharacterSet.KANJI to 49),
+            grade = GradeSummary(Grade(1.9, Rank(5), 0.7), windowCount = 12),
             onOpenQuizSetup = {},
             onLearn = {},
             onOpenStats = {},
@@ -300,6 +349,6 @@ private fun HomePreview() {
 @Composable
 private fun HomeDarkPreview() {
     UnolingoTheme(darkTheme = true) {
-        HomeContent(emptyMap(), onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
+        HomeContent(emptyMap(), null, onOpenQuizSetup = {}, onLearn = {}, onOpenStats = {}, onOpenBattle = {}, onOpenCredits = {})
     }
 }

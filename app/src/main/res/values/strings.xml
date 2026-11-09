@@ -84,6 +84,34 @@
     <string name="quiz_action_home">Retour à l\'accueil</string>
 
     <string name="stats_title">Statistiques</string>
+    <string name="rank_kyu">%d kyū</string>
+    <string name="rank_dan">%d dan</string>
+    <string name="grade_current">Votre grade</string>
+    <string name="grade_next_rank">Prochain rang : %1$s · %2$d %%</string>
+    <string name="grade_top_rank">Rang maximal atteint, bravo !</string>
+    <string name="grade_window_count">Fenêtre de calcul : %1$d / %2$d quiz</string>
+    <string name="grade_no_quiz">Aucun quiz pour l\'instant : jouez pour gagner un grade</string>
+    <string name="stats_chart_title">Progression du grade</string>
+    <plurals name="stats_chart_description">
+        <item quantity="one">Graphique de progression : %1$d point, rang actuel %2$s</item>
+        <item quantity="other">Graphique de progression : %1$d points, rang actuel %2$s</item>
+    </plurals>
+    <string name="stats_best_rank">Meilleur rang atteint</string>
+    <string name="stats_window">Quiz dans la fenêtre</string>
+    <string name="stats_window_value">%1$d / %2$d</string>
+    <string name="stats_before_exit">Avant que le plus ancien sorte</string>
+    <plurals name="stats_quiz_count">
+        <item quantity="one">%d quiz</item>
+        <item quantity="other">%d quiz</item>
+    </plurals>
+    <string name="stats_history_title">Derniers quiz</string>
+    <string name="stats_game_kanji">Kanji · grade %d</string>
+    <string name="stats_score">%1$d / %2$d</string>
+    <string name="stats_empty_title">Faites votre premier quiz</string>
+    <string name="stats_empty_body">Votre grade et sa courbe de progression apparaîtront ici dès la première série terminée.</string>
+    <string name="stats_empty_action">Commencer un quiz</string>
+    <string name="stats_how_title">Comment est calculé le grade ?</string>
+    <string name="stats_how_body">Votre grade est la moyenne des points de vos %1$d derniers quiz : seuls les plus récents comptent. Un quiz rapporte sa part de bonnes réponses multipliée par sa difficulté : 1 pour les kana, de 1,5 à 5 pour les kanji selon leur grade, donc les kanji plus difficiles valent plus de points. Jouer avec l\'aide retire %2$d %% des points. Les rangs vont de 10 kyū à 1 kyū, puis de 1 dan à 5 dan.</string>
     <string name="battle_title">Mode duel</string>
     <string name="battle_setup_rules">Posez le téléphone à plat entre vous deux, face à face. Chacun répond sur sa moitié : le premier qui répond juste marque le point. Une erreur bloque jusqu’à la manche suivante.</string>
     <string name="battle_versus">contre</string>

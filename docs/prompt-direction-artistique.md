@@ -47,6 +47,7 @@ Joyeuse, claire et encourageante, avec une inspiration japonaise subtile et mode
    - « Jeu de caractères » : sélecteur segmenté à 3 options (Hiragana, Katakana, Kanji).
    - Bouton principal « Commencer » (ouvre les réglages du quiz, point 1 bis), puis bouton secondaire « Apprendre : Hiragana » (ouvre l'écran Apprendre du jeu sélectionné) ; boutons secondaires « Statistiques » et « Mode duel ».
    - L'accueil est aujourd'hui très austère : propose une version plus engageante (en-tête illustré, cartes pour les jeux de caractères, mise en avant du duel…) sans ajouter de fonctionnalités.
+   - Carte « Votre grade » sous l'en-tête (cliquable, ouvre la page Statistiques) : sceau du rang (rond `primary` pour un kyū, carré doré `tertiaryContainer` pour un dan, numéro + 級 / 段), « Votre grade », rang (« 4 kyū »), barre de progression vers le rang suivant (« Prochain rang : 3 kyū · 62 % ») et « Fenêtre de calcul : 12 / 20 quiz ». Sans aucun quiz : 10 kyū, barre vide et « Aucun quiz pour l'instant : jouez pour gagner un grade ». Mise à jour en direct.
 
 1 bis. Réglages du quiz (après « Commencer »)
    - Barre du haut : flèche retour et « Réglages du quiz ».
@@ -101,7 +102,13 @@ Joyeuse, claire et encourageante, avec une inspiration japonaise subtile et mode
     - Boîte de dialogue « Quitter le duel ? » (« La partie en cours sera perdue. », « Continuer » / « Quitter »).
     - Chaque joueur doit savoir instantanément quelle moitié est la sienne : couleur, motif, éventuellement un avatar.
 
-12. Statistiques : aujourd'hui un simple « Bientôt disponible ». Propose une maquette future : historique des séries, taux de réussite par jeu de caractères, caractères les plus ratés.
+12. Statistiques (page de progression du grade, ouverte depuis la carte « Votre grade » ou la tuile « Statistiques »)
+   - Carte du grade : sceau 72 dp, « Votre grade », rang en grand, barre de progression vers le rang suivant.
+   - « Progression du grade » : graphique tracé en Canvas (tag `progressChart`, description d'accessibilité « Graphique de progression : 25 points, rang actuel 7 kyū ») : courbe lissée en `primary` avec dégradé dessous, paliers des rangs en lignes horizontales légères (`outlineVariant`) avec leur nom, ligne du rang actuel plus marquée, dernier point mis en avant par un anneau `primaryContainer`. Couleurs du thème uniquement, lisible en clair et en sombre.
+   - Carte de faits : meilleur rang atteint, quiz dans la fenêtre (« 20 / 20 »), nombre de quiz avant que le plus ancien sorte de la fenêtre.
+   - « Derniers quiz » : les 8 derniers, du plus récent au plus ancien : jeu (« Kanji · grade 3 »), date, rang après le quiz, score (« 8 / 10 »).
+   - État vide : sceau 10 kyū, « Faites votre premier quiz », texte d'encouragement et bouton « Commencer un quiz » (ouvre les réglages du quiz).
+   - « Comment est calculé le grade ? » : fenêtre des 20 derniers quiz, kanji plus difficiles = plus de points, aide = −20 % des points, échelle 10 kyū → 5 dan.
 
 13. Icône de l'application : icône adaptative Android (premier plan, arrière-plan, version monochrome pour les icônes thématiques).
 

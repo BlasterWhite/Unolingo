@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.battle.BattleScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.credits.CreditsScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeScreen
@@ -59,7 +60,13 @@ fun UnolingoNavHost(modifier: Modifier = Modifier) {
             )
         }
         composable<StatsRoute> {
-            StatsScreen(onBack = navController::popBackStack)
+            StatsScreen(
+                onBack = navController::popBackStack,
+                onStartQuiz = {
+                    setupSettings = setupSettings.withSet(CharacterSet.HIRAGANA)
+                    navController.navigate(QuizSetupRoute(CharacterSet.HIRAGANA))
+                },
+            )
         }
         composable<CreditsRoute> {
             CreditsScreen(onBack = navController::popBackStack)
