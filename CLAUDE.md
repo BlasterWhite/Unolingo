@@ -10,7 +10,7 @@ The repository must stay on Git with an up-to-date `README.md` at the root (proj
 
 ## Project state
 
-Implemented: home screen (set + mode selection), character data for the three sets, and the full **display quiz mode** (10 questions, character → romaji typed, romaji → character with 4 choices, per-question feedback, result screen). Also implemented: the **audio quiz mode** (20 text-to-speech questions, multiple choice) and the **local battle mode** (1 vs 1 split screen on one device, 10 multiple-choice rounds). Not implemented yet: saving results to Room (no entities/database yet), statistics, Bluetooth/Wi-Fi battle. The sections "Functional scope" and "Implementation guidelines" below describe what is planned; when an architectural decision is actually implemented, move it into "Architecture decisions" and keep this section accurate.
+TP1 and TP2 are implemented: the **Learn** screen (cards for 104 hiragana, 104 katakana, 2,136 kanji, normal/slow TTS), the **quiz** (settings screen, 10 questions with 4 choices, question kinds per set, help, TTS, kanji grade ≤ g, result dots, automatic next question after 2 s), results saved in **Room**, the **player grade** with the home card and the progress page (Canvas chart), the **local battle mode** (1 vs 1 split screen), and the credits screen. Instrumented tests (`app/src/androidTest`) cover fake results, grade and chart. Not implemented: Bluetooth/Wi-Fi battle, a per-character statistics screen (the data is stored in `question_result`, no screen reads it yet), persistence of the quiz settings between launches (kept for the session only). The sections "Functional scope" and "Implementation guidelines" below describe what is planned; when an architectural decision is actually implemented, move it into "Architecture decisions" and keep this section accurate.
 
 ## Functional scope
 
@@ -23,25 +23,29 @@ Three sets, in two families:
 
 Romanization uses Hepburn (し = "shi", つ = "tsu", ふ = "fu"). Answer comparison should be case-insensitive and trim whitespace.
 
-### Quiz modes
+### Quiz
 
-| Mode | Length | Question types |
-|------|--------|----------------|
-| Display (visual) | 10 questions | character → romaji, romaji → character |
-| Audio (`QuizMode.AUDIO`) | 20 questions | sound → character, character → sound |
+A quiz is configured by a `QuizConfig` (character set, question kind, help, TTS, grade) chosen on the quiz settings screen: always **10 questions with 4 choices** (no typed answers).
 
-- "character → romaji": show a character, the user picks or types the reading.
-- "romaji → character": show a reading, the user picks the matching character among choices.
-- "sound → character": the app pronounces a reading with TTS (automatically, plus a replay button), the user picks the character among 4.
-- "character → sound": show a character, the user plays 4 pronunciations ("Son 1…4"), selects one and validates.
+| Question kind | Sets | Shown → asked |
+|---------------|------|---------------|
+| `CHARACTER_TO_READING` | all | character → reading (romaji for kana, hiragana for kanji) |
+| `READING_TO_CHARACTER` | all | reading → character |
+| `CHARACTER_TO_MEANING` | kanji | character → English meaning |
+| `MEANING_TO_CHARACTER` | kanji | English meaning → character |
+| `MIX` | all | every kind of the set, spread over the 10 questions |
 
-The audio mode uses **text-to-speech only, no speech recognition** (the user's decision): no microphone, no `RECORD_AUDIO` permission.
+- **help**: each question carries a help text (`QuestionHelp`); a quiz played with help is worth 20 % fewer grade points.
+- **tts**: reading questions become audio questions: "sound → character" (the app pronounces the reading, automatically plus a replay button) and "character → sound" (the user plays 4 pronunciations "Son 1…4", selects one and validates). Meaning questions stay visual and the kanji reading is spoken when the question appears.
+- **grade g** (kanji only): the quiz draws the kanji of grade **≤ g**. The TP2 text says "≥ g"; the user chose "≤ g" so the chosen grade caps the difficulty. Data grades are 1–6 and 8; kana quizzes always use grade 1.
+
+Speech is **text-to-speech only, no speech recognition** (the user's decision): no microphone, no `RECORD_AUDIO` permission.
 
 Distractors in multiple-choice questions should come from the same set and be visually or phonetically close when possible.
 
 ### Persistence: scores, dates, stats
 
-A local database stores every finished session: date/time, character set, mode, score, number of questions, and per-character results (correct/incorrect). This feeds a statistics screen (history, success rate per set, weakest characters).
+A local Room database stores every finished quiz: date/time, character set, question kind, help, TTS, grade, score, number of questions, and per-character results (correct/incorrect). It feeds the player grade and the progress page. A per-character statistics screen (weakest characters) is still to do.
 
 ### Battle mode
 
@@ -58,10 +62,10 @@ Keep the battle game logic independent from the transport so the same rules work
 Defaults to follow unless the team decides otherwise (record any deviation in "Architecture decisions"):
 
 - Architecture: MVVM with one `ViewModel` per screen exposing `StateFlow` UI state; Compose screens stay stateless where practical. Navigation with Navigation Compose.
-- Packages under `fr.enssat.unolingo.mguezenn_mphongsa`: `ui/` (screens + theme), `data/` (database, repositories, character data), `domain/` or `quiz/` (question generation, scoring, battle rules), `speech/` (text-to-speech wrapper), `sound/` (answer feedback sounds), `battle/` (transports).
+- Packages under `fr.enssat.unolingo.mguezenn_mphongsa`: `ui/` (screens + theme: `home`, `learn`, `quizsetup`, `quiz`, `stats`, `battle`, `credits`, `navigation`, `common`, `theme`), `data/` (character repository; `data/results` = Room), `domain/` (`model`, `quiz`, `kana`, `speech`, `progress`, `battle`), `speech/` (text-to-speech wrapper), `sound/` (answer feedback sounds), `battle/` (transports, not created yet).
 - Quiz logic (question generation, answer checking, scoring) must be pure Kotlin with no Android dependencies so it can be covered by JVM unit tests in `app/src/test`.
 - Database: Room (with KSP), declared in the version catalog.
-- Character data: ship it as a bundled asset (e.g. JSON in `app/src/main/assets/`) or a prepopulated Room table; don't hard-code long character lists in Kotlin.
+- Character data: ship it as bundled JSON (`res/raw/` for the TP files, `assets/` for the extras); don't hard-code long character lists in Kotlin.
 - Text-to-speech: Android `TextToSpeech` with `Locale.JAPANESE`. A Japanese voice may not be installed: check `setLanguage` result and show a clear message (and an action to install voice data) instead of failing silently. Release the engine in `onCleared`/`onDispose`.
 - Bluetooth: on Android 12+ use `BLUETOOTH_SCAN` / `BLUETOOTH_CONNECT` (and `BLUETOOTH_ADVERTISE` if needed); minSdk is 26, so also handle the legacy permissions and location requirement for older versions.
 - All user-visible strings go in `res/values/strings.xml` (French UI); Japanese characters in data files, not in string resources.
@@ -70,45 +74,57 @@ Defaults to follow unless the team decides otherwise (record any deviation in "A
 
 Add entries here as decisions are implemented (what was chosen, and why).
 
-- **Package name**: the TP imposes `fr.enssat.<project>.<login1>_<login2>`, so the namespace and applicationId are `fr.enssat.unolingo.mguezenn_mphongsa` (lets the teacher install every project on one phone).
-- **Navigation**: Navigation Compose with type-safe `@Serializable` routes in `ui/navigation/Routes.kt`; `UnolingoNavHost` owns the `NavController` and screens receive plain callbacks (`onStartQuiz`, `onBack`…), never the controller. Enums passed as route arguments (`CharacterSet`, `QuizMode`) are `@Serializable` and `@Keep`.
-- **Domain model**: `domain/model/` holds pure Kotlin enums. `QuizMode` carries its question count and question types, so UI and quiz logic read them from there instead of hard-coding 10/20. UI labels for enums are mapped to string resources in `ui/common/Labels.kt`.
+- **Package name**: the TP imposes `fr.enssat.<project>.<login1>_<login2>`, so the namespace, the Kotlin package and the applicationId are all `fr.enssat.unolingo.mguezenn_mphongsa` (lets the teacher install every project on one phone). Keep the three identical.
+- **Credits**: `ui/credits/CreditsScreen` (opened from "À propos · Crédits" on the home) cites kanji-data (https://github.com/davidluzgouveia/kanji-data, MIT, licence in `assets/licenses/`), Klee One and Lexend (OFL) and Material Symbols (Apache 2.0), as TP1 requires.
+- **Navigation**: Navigation Compose with type-safe `@Serializable` routes in `ui/navigation/Routes.kt`; `UnolingoNavHost` owns the `NavController` and screens receive plain callbacks (`onStartQuiz`, `onBack`…), never the controller. Enums passed as route arguments (`CharacterSet`) are `@Serializable` and `@Keep`; `QuizRoute` carries a whole `QuizConfig`, serialized to JSON by a custom `NavType` (`ui/navigation/QuizConfigNavType.kt`).
+- **Domain model**: `domain/model/` holds pure Kotlin types (`CharacterSet`, `QuestionKind`, `QuestionType`, `QuizConfig`). `QuizConfig` replaced `QuizMode` and carries the question count (10) and question types, so UI and quiz logic read them from there instead of hard-coding. UI labels for enums are mapped to string resources in `ui/common/Labels.kt`.
 - **Screens**: each screen owns its `Scaffold` (and therefore its insets); `MainActivity` only sets the theme and the NavHost. `ui/common/PlaceholderScreen` is a temporary shell for unimplemented features; replace it as features land.
 - **Icons**: no `material-icons` dependency; icons are vector drawables in `res/drawable` (Material Symbols paths) used via `painterResource`. There is no AppCompat, so don't reference `?attr/colorControlNormal` or other AppCompat attributes in resources.
-- **Layers**: `domain/` is pure Kotlin (no Android imports): `domain/model` (`JapaneseCharacter`, enums) and `domain/quiz` (`QuestionGenerator`, `DistractorPicker`, `AnswerChecker`, immutable `QuizSession`). `data/` loads characters; `ui/<screen>/` holds the screen and its ViewModel. ViewModels stay thin and delegate rules to `domain/`.
+- **Layers**: `domain/` is pure Kotlin (no Android imports): `domain/model` (`JapaneseCharacter`, enums) and `domain/quiz` (`QuestionGenerator`, `DistractorPicker`, `AnswerChecker`, `QuizPool`, `QuestionHelp`, immutable `QuizSession`), `domain/speech`, `domain/progress`, `domain/kana`. `data/` loads characters; `ui/<screen>/` holds the screen and its ViewModel. ViewModels stay thin and delegate rules to `domain/`.
 - **Dependency injection**: manual. `UnolingoApplication` owns an `AppContainer` with app-wide singletons; ViewModels are built with `viewModelFactory { initializer { … } }` reading the container through `APPLICATION_KEY` (see `QuizViewModel.factory`). Route arguments are passed to the factory, not read from `SavedStateHandle`.
-- **Character data**: `app/src/main/assets/characters/{hiragana,katakana,kanji}.json`, generated by `tools/gen_characters.py` (edit the script, then regenerate; katakana are derived from hiragana). Fields: `readings` = Hepburn readings that may be displayed (exactly one for kana, several for kanji), `alternatives` = other accepted spellings never displayed (`si`, `nn`, `di`…), `meaning` (French, kanji only), `similar` = visually confusable symbols. Kanji readings use wāpuro long vowels (`kou`, `juu`); answer normalization maps macrons to that form. `CharacterDataTest` validates the real files.
-- **Quiz rules**: a multiple-choice question never offers a distractor that also accepts the prompt as an answer (じ/ぢ, 日/火 for "ka"). Distractors are ranked by similarity (`similar` list, shared vowel/consonant, same symbol length) with random tie-breaking.
+- **Character data**: the TP's JSON files are bundled in `app/src/main/res/raw/` (`kana_data.json`, `kanji_jouyou.json`), read with `loadJsonFromRaw` and parsed in Kotlin (`data/RawCharacterRepository`, raw `@Serializable` classes in `RawCharacterData.kt`, cached once behind a `Mutex`). Do not modify them. `app/src/main/assets/characters/extras.json`, generated by `tools/gen_characters.py`, adds what the TP lacks: `similar` (visually confusable symbols) and `alternatives` (accepted spellings never displayed: `si`, `nn`, `di`…). It is kept for now, no decision to drop it. `JapaneseCharacter` has `readings` (romaji; exactly one for kana), `grade`, `meaningsEn`, `kanaReadings` (on/kun hiragana) and `hiraganaFor(reading)`; `meaning` is the first three English meanings joined. Answer normalization maps macrons to wāpuro long vowels and treats hiragana and romaji answers as equivalent (`AnswerChecker`). `CharacterDataTest` validates the real files.
+- **Quiz rules**: a multiple-choice question never offers a distractor that also accepts the prompt as an answer (じ/ぢ, 日/火 for "ka"). Distractors are ranked by similarity (`similar` list, shared vowel/consonant, same symbol length); meaning questions never offer a distractor sharing an English meaning with the target with random tie-breaking.
 - **Battle**: rules live in the immutable `domain/battle/BattleGame` (`submit(player, answer)`, `nextRound()`), which knows nothing about the transport; Bluetooth/Wi-Fi must reuse it and only relay answers. `BattleViewModel` drives the local game and auto-advances to the next round after a short reveal delay. The split screen rotates player TWO's panel with `Modifier.rotate(180f)` (Compose hit-testing follows the rotation), keeps the screen on and locks the orientation while a game is running.
 - **Shared choice UI**: `ui/common/Choices.kt` (`ChoiceGrid`, `choiceState`, `QuestionPrompt`, `Question.choiceOptions`) is used by both the solo quiz and the battle. `choiceState` keeps the right answer hidden until the round is revealed, so a player locked out by a mistake cannot see it.
-- **Audio**: `speech/JapaneseSpeaker` wraps `TextToSpeech` (status `READY` / `MISSING_VOICE` / `UNAVAILABLE`); `QuizViewModel` owns it in audio mode (created through `speakerFactory`, released in `onCleared`) and shows `QuizUiState.MissingVoice` with an install action when no Japanese voice exists, re-checking on resume. Readings are always spoken **as hiragana** produced by `domain/kana/KanaConverter` (built from the hiragana data, longest syllable first), never as a bare kanji whose reading the engine would pick itself; `CharacterDataTest` checks that every reading converts. The manifest declares a `<queries>` entry for `android.intent.action.TTS_SERVICE`, required for package visibility.
+- **Audio**: `speech/JapaneseSpeaker` wraps `TextToSpeech` (status `READY` / `MISSING_VOICE` / `UNAVAILABLE`); `QuizViewModel` owns it when `QuizConfig.tts` is on (created through `speakerFactory`, released in `onCleared`) and shows `QuizUiState.MissingVoice` with an install action when no Japanese voice exists, re-checking on resume. The manifest declares a `<queries>` entry for `android.intent.action.TTS_SERVICE`, required for package visibility. What is spoken is always **hiragana**, never a bare kanji whose reading the engine would pick itself: `JapaneseCharacter.hiraganaFor` gives the reading of a character, and `domain/speech/SpokenReadings` maps every reading of a quiz pool to the hiragana of its own character (so the 4 "Son" proposals of "character → sound" each say their own reading). `domain/kana/KanaConverter` (romaji → hiragana) is no longer used for kanji.
+- **Speech speed**: `JapaneseSpeaker.speak(text, rate)` calls `setSpeechRate` first; `SpeechRates` has `DEFAULT` 0.85 (old value), `NORMAL` 1.0 and `SLOW` **0.3**. `domain/speech/SpeechRateAlternator` (pure Kotlin) alternates normal → slow → normal on each listen of the same text and restarts at normal when the text changes, like Google Translate. Used by the Learn screen and by the quiz (automatic playback, replay and the "Son 1…4" proposals).
+- **Learn screen**: `ui/learn/` (`LearnRoute(characterSet)`, `LearnViewModel` owning its own `JapaneseSpeaker`, built in its factory without touching `AppContainer`). Previous/next without looping (disabled at both ends) plus a 280 ms swipe; the kanji card shows the big character, a "Grade N" badge, the English meaning and the on'yomi/kun'yomi readings (hiragana over romaji, each tappable to hear it), with a grade filter row for kanji. A missing voice shows the same full-screen state as the audio quiz.
+- **Quiz configuration and pool**: `QuizConfig` + `QuestionKind` (see Functional scope), validated in `init` (kind available for the set, grade valid, kana grade 1). `QuizPool` keeps the kanji of grade **≤ g** before questions are generated, so questions and distractors come from the same subset; kana are never filtered; an empty selection falls back to the whole list. The battle uses `QuizPool` with `DEFAULT_KANJI_GRADE` (2). `QuestionType.CHARACTER_TO_ROMAJI` (typed input) only survives for `BattleGameTest`; the generator turns it into the choice type.
+- **Quiz settings screen**: `ui/quizsetup/` is opened by "Commencer" on the home through `QuizSetupRoute(set)`; it builds the `QuizConfig`. The home's set is applied once in `onOpenQuizSetup` (not on every recomposition, otherwise the set selector snaps back). Settings are kept for the session only (`rememberSaveable` in the NavHost).
+- **Quiz flow**: after an answer, ◯/✕ feedback on the chosen button (right answer revealed), then `QuizViewModel` moves on by itself after **2 s** (`NEXT_QUESTION_DELAY_MILLIS`, a job in `viewModelScope`; clicks are ignored meanwhile, `restart()` cancels it, `next()` is private so a rotation never replays it). No "Next" button, no correction card. A row of 10 dots shows each question's state (◯ right, ✕ wrong, empty pending, ring = current).
+- **Room**: `data/results/` — `QuizResultEntity` (`quiz_result`: `playedAt`, set, kind, help, tts, grade, score, total, `isFake`), `QuestionResultEntity` (`question_result`: quiz FK with CASCADE, `symbol`, `correct`), `QuizResultDao`, `UnolingoDatabase` (version 1) and `ResultsRepository` / `RoomResultsRepository`, registered in `AppContainer`. Enums are stored by name (renaming a constant is a migration). `observeAll` is chronological, `latest(n)` newest first. `QuizViewModel` saves a finished quiz **once**, on an injected IO dispatcher inside `NonCancellable`; an abandoned quiz is never saved, a replay is a new result, the battle is not saved. **`isFake`**: rows inserted by instrumented tests; only `deleteFakeResults()` (`isFake = 1`) may delete rows in tests, never `clearAllTables()` nor deleting the database (the phone holds real results). The `androidx.room` Gradle plugin exports schemas to `app/schemas/` (commit them: `1.json` is the current one). Keep this the only place that knows Room: ViewModels use `ResultsRepository`.
+- **Player grade**: `domain/progress/` (pure Kotlin): `QuizOutcome`, `GradeConfig` (named constants: window 20, help 0.8, max value 5, 15 levels), `GradeCalculator`. points = score/total × difficulty (1 for kana, 1 + g/2 for kanji) × 0.8 with help; value = mean of the 20 latest quizzes; level = min(14, ⌊value/5 × 15⌋), 0 = 10 kyū … 9 = 1 kyū, 10 = 1 dan … 14 = 5 dan; plus `progress` (0..1) and `history`. The README explains the formula and why. `RoomResultsRepository.latestOutcomes` returns outcomes oldest-first for the calculator.
+- **Progress page**: `ui/stats/` (`StatsViewModel` over the repository's flow, `StatsUiState`, `RankSeal`). The chart `ProgressChart` is drawn on a Compose **Canvas** with theme colors only, no chart dependency; it carries the test tag `progressChart` and the description "N points, rang actuel X", rank thresholds as light lines. The home "Votre grade" card (tag `gradeCard`) is live and opens the page.
+- **Instrumented tests**: `app/src/androidTest` (`TestSupport`, `StatsSeedTest`, `StatsCleanupTest`): seed 25 fake quizzes (the 5 oldest fall outside the window), compare the DB grade with a hand computation, check the home card and the chart description, then remove only the fakes. `gradle.properties` sets `android.injected.androidTest.leaveApksInstalledAfterRun=true`: by default `connectedDebugAndroidTest` uninstalls the app and wipes its data. On the Xiaomi test phone it must stay unlocked and MIUI asks to confirm the test APK install on screen (`INSTALL_FAILED_USER_RESTRICTED` otherwise).
 - **Feedback sounds**: `sound/AnswerSoundPlayer` (SoundPool, app-wide singleton in `AppContainer`) plays `res/raw/answer_correct.wav` / `answer_wrong.wav` when an answer is checked, from `QuizViewModel.submitAnswer` and `BattleViewModel.submitAnswer` (not from composables, so a rotation never replays it). The sounds are original, synthesized by `tools/gen_sounds.py`: never ship Duolingo's (or any third-party) sound files.
 - **Art direction**: `docs/prompt-direction-artistique.md` is the brief for the visual identity (screen and state inventory, Material 3 token constraints). Keep its inventory in sync when screens change; when the art direction lands, apply it through `ui/theme/` tokens rather than per-screen colors.
 - **Homophones**: for audio questions (`bySound = true` in `DistractorPicker`), a distractor never shares an accepted answer with the target in either direction, so を/お, ぢ/じ, づ/ず or kanji with a common reading are never offered together with the right answer.
 - **Japanese text rendering**: display Japanese characters with `ui/common/JapaneseText`, which sets a `ja-JP` locale on the text style; otherwise a French-locale device may render kanji with Chinese glyph variants.
-- **Room**: the `androidx.room` Gradle plugin exports schemas to `app/schemas/` (commit them). No `@Database` exists yet.
 - **Library versions**: Kotlin stays at 2.2.10 for now, so kotlinx-serialization-json is pinned to 1.9.0 (newer versions target newer Kotlin). Bump Kotlin, the serialization plugin and the library together.
 
 ## Commands
 
-Run from the repo root. On Windows use `gradlew.bat` (or `./gradlew` from Git Bash). There is no `java` on the PATH on the dev machine: from a shell, set `JAVA_HOME` to Android Studio's bundled JBR first (`export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"` in Git Bash).
+Run from the repo root.
+
+- **Windows**: use `gradlew.bat` (or `./gradlew` from Git Bash). There is no `java` on the PATH: set `JAVA_HOME` to Android Studio's bundled JBR first (`export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"` in Git Bash).
+- **Linux (no Android Studio)**: `gradlew` is not executable in Git, so run `sh gradlew …`. A JDK (25 works) is on the PATH; `local.properties` has `sdk.dir`, or export `ANDROID_HOME` (e.g. `~/Android/Sdk`) when it is missing (fresh worktrees have none). The machine has little free RAM: add `-Dkotlin.compiler.execution.strategy=in-process` and run `sh gradlew --stop` afterwards. Install with `adb install -r app/build/outputs/apk/debug/app-debug.apk` (more reliable than `installDebug` on the Xiaomi) then `adb shell am start -n fr.enssat.unolingo.mguezenn_mphongsa/.MainActivity`. The SDK's `platform-tools/adb` is mis-extracted (real binary in `platform-tools/platform-tools/adb`): a symlink at `~/Android/Sdk/platform-tools/adb` makes Gradle find it.
 
 ```bash
 ./gradlew assembleDebug                 # build debug APK
 ./gradlew installDebug                  # install on connected device/emulator
 ./gradlew testDebugUnitTest             # JVM unit tests (app/src/test)
-./gradlew connectedDebugAndroidTest     # instrumented tests (app/src/androidTest), needs a device/emulator
+./gradlew connectedDebugAndroidTest     # instrumented tests (app/src/androidTest), needs a device/emulator; on the real phone it stays unlocked, see "Instrumented tests"
 ./gradlew lint                          # Android lint
 
 # Screenshots of the main screens, written to app/build/screenshots/
 ./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.ui.ScreenshotTest"
 
 # Single unit test class / method
-./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizModeTest"
-./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizModeTest.displayMode_hasTenVisualQuestions"
+./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfigTest"
+./gradlew testDebugUnitTest --tests "fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfigTest.quizHasTenQuestions"
 
 # Single instrumented test class
-./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=fr.enssat.unolingo.mguezenn_mphongsa.ExampleInstrumentedTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=fr.enssat.unolingo.mguezenn_mphongsa.StatsCleanupTest
 ```
 
 ## Build setup
