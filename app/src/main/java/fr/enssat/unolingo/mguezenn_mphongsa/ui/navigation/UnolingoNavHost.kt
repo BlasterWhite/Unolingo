@@ -27,19 +27,20 @@ fun UnolingoNavHost(modifier: Modifier = Modifier) {
     NavHost(navController = navController, startDestination = HomeRoute, modifier = modifier) {
         composable<HomeRoute> {
             HomeScreen(
-                onOpenQuizSetup = { set -> navController.navigate(QuizSetupRoute(set)) },
+                onOpenQuizSetup = { set ->
+                    // The home's set is applied once, on arrival; the setup screen can then change it freely.
+                    setupSettings = setupSettings.withSet(set)
+                    navController.navigate(QuizSetupRoute(set))
+                },
                 onLearn = { set -> navController.navigate(LearnRoute(set)) },
                 onOpenStats = { navController.navigate(StatsRoute) },
                 onOpenBattle = { navController.navigate(BattleRoute) },
                 onOpenCredits = { navController.navigate(CreditsRoute) },
             )
         }
-        composable<QuizSetupRoute> { entry ->
-            val set = entry.toRoute<QuizSetupRoute>().characterSet
-            // The home's set wins on arrival; the other choices are the remembered ones.
-            val settings = if (setupSettings.characterSet == set) setupSettings else setupSettings.withSet(set)
+        composable<QuizSetupRoute> {
             QuizSetupScreen(
-                settings = settings,
+                settings = setupSettings,
                 onSettingsChange = { setupSettings = it },
                 onStart = { config -> navController.navigate(QuizRoute(config)) },
                 onBack = navController::popBackStack,
