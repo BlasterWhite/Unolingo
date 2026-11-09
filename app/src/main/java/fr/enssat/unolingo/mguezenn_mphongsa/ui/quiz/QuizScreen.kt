@@ -1,9 +1,6 @@
 package fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,6 +15,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,23 +25,22 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -79,9 +76,6 @@ import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.labelRes
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.KanaStyles
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 
-/** Material 3 "emphasized decelerate": used for elements entering the screen. */
-internal val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
-
 @Composable
 fun QuizScreen(
     config: QuizConfig,
@@ -104,7 +98,6 @@ fun QuizScreen(
         isSpeaking = isSpeaking,
         actions = QuizActions(
             onSubmit = viewModel::submitAnswer,
-            onNext = viewModel::next,
             onRestart = viewModel::restart,
             onReplay = viewModel::replay,
             onPlayReading = viewModel::playReading,
@@ -118,19 +111,18 @@ fun QuizScreen(
 /** User actions of the quiz screen, grouped to keep the composables' signatures short. */
 internal data class QuizActions(
     val onSubmit: (String) -> Unit,
-    val onNext: () -> Unit,
     val onRestart: () -> Unit,
     val onReplay: () -> Unit,
     val onPlayReading: (String) -> Unit,
     val onRetryVoice: () -> Unit,
 ) {
     companion object {
-        val None = QuizActions({}, {}, {}, {}, {}, {})
+        val None = QuizActions({}, {}, {}, {}, {})
     }
 }
 
 @Composable
-private fun QuizContent(
+internal fun QuizContent(
     title: String,
     subtitle: String,
     uiState: QuizUiState,
@@ -233,27 +225,13 @@ private fun AnsweringContent(
                 }
             }
         }
-        state.feedback?.let { feedback ->
-            Column(
-                modifier = Modifier.padding(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                FeedbackCard(feedback)
-                PrimaryButton(
-                    text = stringResource(
-                        if (state.number == state.total) R.string.quiz_action_see_result else R.string.quiz_action_next,
-                    ),
-                    onClick = actions.onNext,
-                )
-            }
-        }
     }
 }
 
+/** "Question 3 / 10", the score, then one dot per question (right ◯, wrong ✕, not answered yet: empty). */
 @Composable
 private fun ProgressHeader(state: QuizUiState.Answering) {
-    val progress by animateFloatAsState(state.number.toFloat() / state.total, tween(280), label = "progress")
-    Column(modifier = Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier = Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 text = stringResource(R.string.quiz_progress, state.number, state.total),
@@ -265,16 +243,62 @@ private fun ProgressHeader(state: QuizUiState.Answering) {
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp),
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            strokeCap = StrokeCap.Round,
-            gapSize = 0.dp,
-            drawStopIndicator = {},
-        )
+        ResultDots(state.outcomes, current = state.number - 1)
+    }
+}
+
+@Composable
+private fun ResultDots(outcomes: List<Boolean?>, current: Int) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        outcomes.forEachIndexed { index, outcome ->
+            ResultDot(index + 1, outcome, isCurrent = index == current, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+/** The mark is drawn by [AnswerMark] so the status never relies on color alone; the current question has a thick ring. */
+@Composable
+private fun ResultDot(number: Int, outcome: Boolean?, isCurrent: Boolean, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val status = stringResource(
+        when (outcome) {
+            true -> R.string.quiz_dot_correct
+            false -> R.string.quiz_dot_incorrect
+            null -> if (isCurrent) R.string.quiz_dot_current else R.string.quiz_dot_pending
+        },
+    )
+    val description = stringResource(R.string.quiz_dot_description, number, status)
+    Box(
+        modifier = modifier
+            .widthIn(max = 36.dp)
+            .aspectRatio(1f)
+            .clip(CircleShape)
+            .background(
+                when (outcome) {
+                    true -> colors.primaryContainer
+                    false -> colors.errorContainer
+                    null -> colors.surface
+                },
+            )
+            .border(
+                width = if (isCurrent) 2.dp else 1.dp,
+                color = if (isCurrent) colors.primary else colors.outlineVariant,
+                shape = CircleShape,
+            )
+            .clearAndSetSemantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (outcome != null) {
+            // Only the dot of the question just answered traces its mark.
+            key(outcome) {
+                AnswerMark(
+                    correct = outcome,
+                    color = if (outcome) colors.primary else colors.error,
+                    size = 14.dp,
+                    animate = isCurrent,
+                )
+            }
+        }
     }
 }
 
@@ -286,7 +310,7 @@ private fun QuestionHeading(question: Question) {
         question.help?.let { help ->
             Text(
                 text = buildAnnotatedString { appendMixed(stringResource(R.string.quiz_help, help)) },
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -320,61 +344,6 @@ private fun ChoiceQuestionContent(
         enabled = feedback == null,
         onChoose = onSubmit,
     )
-}
-
-/** Correction card: rises 16 dp and fades in (220 ms) when the answer is checked. */
-@Composable
-private fun FeedbackCard(feedback: QuestionResult) {
-    val colors = MaterialTheme.colorScheme
-    val appear = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { appear.animateTo(1f, tween(durationMillis = 220, easing = EmphasizedDecelerate)) }
-    val rise = with(LocalDensity.current) { 16.dp.toPx() }
-    val character = feedback.question.character
-    Surface(
-        color = if (feedback.isCorrect) colors.primaryContainer else colors.errorContainer,
-        contentColor = if (feedback.isCorrect) colors.onPrimaryContainer else colors.onErrorContainer,
-        shape = MaterialTheme.shapes.medium,
-        modifier = Modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = appear.value
-                translationY = (1 - appear.value) * rise
-            },
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AnswerMark(
-                correct = feedback.isCorrect,
-                color = if (feedback.isCorrect) colors.primary else colors.error,
-                size = 32.dp,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = stringResource(
-                        if (feedback.isCorrect) R.string.quiz_feedback_correct else R.string.quiz_feedback_incorrect,
-                    ),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                // Kanji readings are shown in hiragana, kana readings in romaji.
-                val readings = character.kanaReadings.all.ifEmpty { character.readings }
-                val readsAs = stringResource(R.string.quiz_reads_as, readings.joinToString(" / "))
-                Text(
-                    text = buildAnnotatedString {
-                        appendMixed(character.symbol)
-                        append(" ")
-                        appendMixed(readsAs)
-                    },
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                character.meaning?.let {
-                    Text(text = stringResource(R.string.quiz_meaning, it), style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        }
-    }
 }
 
 @Composable

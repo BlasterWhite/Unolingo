@@ -2,12 +2,16 @@ package fr.enssat.unolingo.mguezenn_mphongsa.ui
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -20,21 +24,30 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuestionKind
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.Question
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionResult
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.battle.BattleScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.ChoiceTestTag
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.Hanamaru
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.home.HomeScreen
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.learn.LearnScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizActions
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizContent
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizScreen
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizUiState
+import fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz.QuizViewModel
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.theme.UnolingoTheme
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.Shadows.shadowOf
 import java.io.File
+import java.time.Duration
 
 /**
  * Renders the real screens (view models, character data) on the JVM and saves PNGs to `app/build/screenshots/`,
@@ -83,6 +96,14 @@ class ScreenshotTest {
         capture("home-dark")
     }
 
+    /** Lets the quiz's 2 s delay elapse (the view model's scope runs on the main looper). */
+    private fun waitForAutoAdvance() {
+        compose.runOnUiThread {
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(QuizViewModel.NEXT_QUESTION_DELAY_MILLIS + 100))
+        }
+        compose.waitForIdle()
+    }
+
     @Test
     fun displayQuiz_questionFeedbackAndResult() {
         show { QuizScreen(QuizConfig(CharacterSet.HIRAGANA, help = true), onBack = {}) }
@@ -90,13 +111,61 @@ class ScreenshotTest {
         capture("quiz-question")
         answerCurrentQuestion()
         capture("quiz-feedback")
-        repeat(10) { index ->
-            if (index > 0) answerCurrentQuestion()
-            val next = if (index == 9) "Voir le résultat" else "Question suivante"
-            compose.onAllNodesWithText(next).onFirst().performClick()
+        // No "next" button: the series moves on by itself, and a tap during the delay is ignored.
+        answerCurrentQuestion()
+        waitForAutoAdvance()
+        waitForText("Question 2 / 10")
+        repeat(9) {
+            answerCurrentQuestion()
+            waitForAutoAdvance()
         }
         waitForText("Série terminée")
         capture("quiz-result")
+        compose.onAllNodesWithText("Rejouer").onFirst().performClick()
+        waitForText("Question 1 / 10")
+    }
+
+    private val sample = listOf(
+        JapaneseCharacter("め", listOf("me"), similar = setOf("ぬ")),
+        JapaneseCharacter("ぬ", listOf("nu"), similar = setOf("め")),
+        JapaneseCharacter("ね", listOf("ne")),
+        JapaneseCharacter("の", listOf("no")),
+    )
+
+    private fun quizState(feedbackAnswer: String?, help: String? = null): QuizUiState.Answering {
+        val question = Question.RomajiToCharacter(sample[1], "nu", sample, help = help)
+        val outcomes = listOf(true, false, true, null, null, null, null, null, null, null)
+        return QuizUiState.Answering(
+            number = 4,
+            total = 10,
+            score = 2,
+            question = question,
+            feedback = feedbackAnswer?.let { QuestionResult(question, it, isCorrect = it == "ぬ") },
+            outcomes = if (feedbackAnswer == null) outcomes else outcomes.toMutableList().also { it[3] = feedbackAnswer == "ぬ" },
+        )
+    }
+
+    @Test
+    fun quizDots_mixedStatesAnswerGivenAndHelp() {
+        var state by mutableStateOf<QuizUiState>(quizState(null, help = "mouton\nnu"))
+        show {
+            QuizContent(
+                title = "Hiragana",
+                subtitle = "Hiragana · Affichage",
+                uiState = state,
+                isSpeaking = false,
+                actions = QuizActions.None,
+                onBack = {},
+            )
+        }
+        capture("quiz-dots-in-progress")
+        compose.runOnUiThread { state = quizState("め", help = "mouton\nnu") }
+        capture("quiz-dots-answer-wrong")
+        compose.runOnUiThread { state = quizState("ぬ") }
+        capture("quiz-dots-answer-right")
+        compose.onAllNodesWithContentDescription("Question 1 : correcte").onFirst().assertExists()
+        compose.onAllNodesWithContentDescription("Question 2 : incorrecte").onFirst().assertExists()
+        compose.onAllNodesWithContentDescription("Question 5 : pas encore répondue").onFirst().assertExists()
     }
 
     @Test

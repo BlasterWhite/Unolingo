@@ -31,6 +31,11 @@
     <string name="quiz_speaking">Lecture…</string>
     <string name="quiz_load_error">Impossible de charger les caractères.</string>
     <string name="quiz_progress">Question %1$d / %2$d</string>
+    <string name="quiz_dot_description">Question %1$d : %2$s</string>
+    <string name="quiz_dot_correct">correcte</string>
+    <string name="quiz_dot_incorrect">incorrecte</string>
+    <string name="quiz_dot_current">en cours</string>
+    <string name="quiz_dot_pending">pas encore répondue</string>
     <string name="quiz_score">Score : %1$d</string>
     <string name="quiz_prompt_reading">Quelle est la lecture de ce caractère ?</string>
     <string name="quiz_prompt_character">Quel caractère se lit ainsi ?</string>
@@ -50,11 +55,6 @@
     <string name="quiz_meaning">Sens : %1$s</string>
     <string name="quiz_help">Aide : %1$s</string>
     <string name="quiz_action_validate">Valider</string>
-    <string name="quiz_action_next">Question suivante</string>
-    <string name="quiz_action_see_result">Voir le résultat</string>
-    <string name="quiz_feedback_correct">Bonne réponse !</string>
-    <string name="quiz_feedback_incorrect">Raté !</string>
-    <string name="quiz_reads_as">se lit : %1$s</string>
     <string name="quiz_result_subtitle">%1$s · %2$s</string>
     <plurals name="quiz_result_encouragement">
         <item quantity="one">Encore un caractère à apprivoiser.</item>
