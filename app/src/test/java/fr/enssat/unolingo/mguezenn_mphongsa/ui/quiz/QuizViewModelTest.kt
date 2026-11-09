@@ -1,6 +1,11 @@
 package fr.enssat.unolingo.mguezenn_mphongsa.ui.quiz
 
 import fr.enssat.unolingo.mguezenn_mphongsa.data.CharacterRepository
+import fr.enssat.unolingo.mguezenn_mphongsa.data.results.QuestionAnswer
+import fr.enssat.unolingo.mguezenn_mphongsa.data.results.ResultsRepository
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.progress.QuizOutcome
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuestionKind
@@ -10,6 +15,7 @@ import fr.enssat.unolingo.mguezenn_mphongsa.sound.AnswerSoundPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -38,15 +44,49 @@ class QuizViewModelTest {
         override suspend fun getCharacters(set: CharacterSet) = characters
     }
 
+    private class Saved(
+        val config: QuizConfig,
+        val score: Int,
+        val total: Int,
+        val playedAt: Long,
+        val answers: List<QuestionAnswer>,
+    )
+
+    private val saved = mutableListOf<Saved>()
+
+    private val results = object : ResultsRepository {
+        override suspend fun insert(config: QuizConfig, score: Int, total: Int, playedAt: Long, answers: List<QuestionAnswer>): Long {
+            saved += Saved(config, score, total, playedAt, answers)
+            return saved.size.toLong()
+        }
+
+        override fun observeOutcomes(): Flow<List<QuizOutcome>> = emptyFlow()
+        override suspend fun latestOutcomes(count: Int): List<QuizOutcome> = emptyList()
+        override suspend fun insertFake(outcomes: List<QuizOutcome>) = Unit
+        override suspend fun deleteFake() = Unit
+    }
+
+    private lateinit var dispatcher: TestDispatcher
+
     @Before
-    fun setUp() = Dispatchers.setMain(StandardTestDispatcher(scheduler))
+    fun setUp() {
+        dispatcher = StandardTestDispatcher(scheduler)
+        Dispatchers.setMain(dispatcher)
+    }
 
     @After
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(): QuizViewModel {
         val config = QuizConfig(CharacterSet.HIRAGANA, QuestionKind.READING_TO_CHARACTER)
-        return QuizViewModel(config, repository, AnswerSoundPlayer { played += it }).also { scheduler.runCurrent() }
+        return QuizViewModel(
+            config,
+            repository,
+            results,
+            AnswerSoundPlayer { played += it },
+            ioDispatcher = dispatcher,
+            clock = { 42L },
+        ).also { scheduler.runCurrent() }
     }
 
     private fun QuizViewModel.answering() = uiState.value as QuizUiState.Answering
@@ -145,5 +185,61 @@ class QuizViewModelTest {
         vm.viewModelScope.cancel()
         advance(QuizViewModel.NEXT_QUESTION_DELAY_MILLIS * 2)
         assertNotNull(vm.answering().feedback)
+    }
+
+    private fun QuizViewModel.answerAll(rightOnes: Int) {
+        repeat(10) { index ->
+            val answer = if (index < rightOnes) rightAnswer() else "not a character"
+            submitAnswer(answer)
+            advance(QuizViewModel.NEXT_QUESTION_DELAY_MILLIS)
+        }
+    }
+
+    @Test
+    fun finishedQuiz_isSavedOnceWithItsContent() {
+        val vm = viewModel()
+        vm.answerAll(rightOnes = 7)
+        assertTrue(vm.uiState.value is QuizUiState.Finished)
+        advance(60_000)
+        assertEquals(1, saved.size)
+        val result = saved.single()
+        assertEquals(QuizConfig(CharacterSet.HIRAGANA, QuestionKind.READING_TO_CHARACTER), result.config)
+        assertEquals(7, result.score)
+        assertEquals(10, result.total)
+        assertEquals(42L, result.playedAt)
+        assertEquals(10, result.answers.size)
+        assertEquals(7, result.answers.count { it.correct })
+    }
+
+    @Test
+    fun finishedQuiz_isNotSavedAgainWhenTimePasses() {
+        val vm = viewModel()
+        vm.answerAll(rightOnes = 10)
+        advance(120_000)
+        assertEquals(1, saved.size)
+    }
+
+    @Test
+    fun replay_savesTheNextQuizAsANewResult() {
+        val vm = viewModel()
+        vm.answerAll(rightOnes = 10)
+        vm.restart()
+        advance(1)
+        vm.answerAll(rightOnes = 0)
+        advance(60_000)
+        assertEquals(listOf(10, 0), saved.map { it.score })
+    }
+
+    @Test
+    fun abandonedQuiz_isNotSaved() {
+        val vm = viewModel()
+        repeat(5) {
+            vm.submitAnswer(vm.rightAnswer())
+            advance(QuizViewModel.NEXT_QUESTION_DELAY_MILLIS)
+        }
+        vm.submitAnswer(vm.rightAnswer())
+        vm.viewModelScope.cancel()
+        advance(60_000)
+        assertTrue(saved.isEmpty())
     }
 }

@@ -8,6 +8,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import fr.enssat.unolingo.mguezenn_mphongsa.UnolingoApplication
 import fr.enssat.unolingo.mguezenn_mphongsa.data.CharacterRepository
+import fr.enssat.unolingo.mguezenn_mphongsa.data.results.QuestionAnswer
+import fr.enssat.unolingo.mguezenn_mphongsa.data.results.ResultsRepository
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.Question
@@ -22,7 +24,12 @@ import fr.enssat.unolingo.mguezenn_mphongsa.speech.AndroidJapaneseSpeaker
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.JapaneseSpeaker
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeakerStatus
 import fr.enssat.unolingo.mguezenn_mphongsa.speech.SpeechRates
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,9 +70,12 @@ sealed interface QuizUiState {
 class QuizViewModel(
     private val config: QuizConfig,
     private val repository: CharacterRepository,
+    private val resultsRepository: ResultsRepository,
     private val answerSounds: AnswerSoundPlayer? = null,
     private val speakerFactory: (() -> JapaneseSpeaker)? = null,
     private val generator: QuestionGenerator = QuestionGenerator(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<QuizUiState>(QuizUiState.Loading)
@@ -133,6 +143,8 @@ class QuizViewModel(
     private fun next() {
         val current = session ?: return
         if (current.isFinished) {
+            // Reached once per series (one pending advance at a time, none after the last question), so one save.
+            saveResult(current)
             _uiState.value = QuizUiState.Finished(
                 score = current.score,
                 total = current.questions.size,
@@ -140,6 +152,24 @@ class QuizViewModel(
             )
         } else {
             showCurrentQuestion(current)
+        }
+    }
+
+    /** Stores a finished quiz off the main thread; a quiz left before its end never gets here. */
+    private fun saveResult(finished: QuizSession) {
+        val playedAt = clock()
+        val answers = finished.results.map { QuestionAnswer(it.question.character.symbol, it.isCorrect) }
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                // Not cancelled if the user leaves the result screen right away.
+                withContext(NonCancellable) {
+                    resultsRepository.insert(config, finished.score, finished.questions.size, playedAt, answers)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Cannot save the quiz result", e)
+            }
         }
     }
 
@@ -232,6 +262,7 @@ class QuizViewModel(
                 QuizViewModel(
                     config = config,
                     repository = app.container.characterRepository,
+                    resultsRepository = app.container.resultsRepository,
                     answerSounds = app.container.answerSounds,
                     speakerFactory = if (config.tts) ({ AndroidJapaneseSpeaker(app) }) else null,
                 )
