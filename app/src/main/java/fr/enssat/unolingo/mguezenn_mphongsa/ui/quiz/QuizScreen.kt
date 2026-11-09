@@ -28,28 +28,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -58,9 +50,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -70,9 +59,8 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import fr.enssat.unolingo.mguezenn_mphongsa.R
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.Question
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz.QuestionResult
 import fr.enssat.unolingo.mguezenn_mphongsa.ui.common.AnswerMark
@@ -96,12 +84,11 @@ internal val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 
 @Composable
 fun QuizScreen(
-    characterSet: CharacterSet,
-    mode: QuizMode,
+    config: QuizConfig,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val viewModel: QuizViewModel = viewModel(factory = QuizViewModel.factory(characterSet, mode))
+    val viewModel: QuizViewModel = viewModel(factory = QuizViewModel.factory(config))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isSpeaking by viewModel.isSpeaking.collectAsStateWithLifecycle()
     // Coming back from the voice installation screen: check the voice again.
@@ -109,10 +96,10 @@ fun QuizScreen(
         viewModel.retryVoice()
         onPauseOrDispose {}
     }
-    val setLabel = stringResource(characterSet.labelRes)
+    val setLabel = stringResource(config.characterSet.labelRes)
     QuizContent(
         title = setLabel,
-        subtitle = stringResource(R.string.quiz_result_subtitle, setLabel, stringResource(mode.labelRes)),
+        subtitle = stringResource(R.string.quiz_result_subtitle, setLabel, stringResource(config.questionKind.labelRes)),
         uiState = uiState,
         isSpeaking = isSpeaking,
         actions = QuizActions(
@@ -236,8 +223,8 @@ private fun AnsweringContent(
             ) {
                 QuestionHeading(shown.question)
                 when (val question = shown.question) {
-                    is Question.CharacterToRomaji -> CharacterToRomajiContent(question, shown.feedback, actions.onSubmit)
-                    is Question.RomajiToCharacter, is Question.CharacterToRomajiChoice ->
+                    is Question.RomajiToCharacter, is Question.CharacterToRomajiChoice,
+                    is Question.CharacterToMeaning, is Question.MeaningToCharacter ->
                         ChoiceQuestionContent(question, shown.feedback, actions.onSubmit)
                     is Question.SoundToCharacter ->
                         SoundToCharacterContent(question, shown.feedback, isSpeaking, actions.onSubmit, actions.onReplay)
@@ -291,13 +278,18 @@ private fun ProgressHeader(state: QuizUiState.Answering) {
     }
 }
 
-/** Instruction, then the meaning of a kanji. */
+/** Instruction, then the help text when the quiz has help enabled. */
 @Composable
 private fun QuestionHeading(question: Question) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(text = stringResource(question.instructionRes), style = MaterialTheme.typography.headlineSmall)
-        // Hearing a sound and seeing its meaning would give the answer away.
-        if (question !is Question.SoundToCharacter) MeaningText(question.character)
+        question.help?.let { help ->
+            Text(
+                text = buildAnnotatedString { appendMixed(stringResource(R.string.quiz_help, help)) },
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -316,46 +308,6 @@ internal fun PromptPanel(modifier: Modifier = Modifier, content: @Composable Box
 }
 
 @Composable
-private fun CharacterToRomajiContent(
-    question: Question.CharacterToRomaji,
-    feedback: QuestionResult?,
-    onSubmit: (String) -> Unit,
-) {
-    val answered = feedback != null
-    var answer by rememberSaveable(question.character.symbol) { mutableStateOf("") }
-    val focusRequester = remember { FocusRequester() }
-    val submit = { if (answer.isNotBlank() && !answered) onSubmit(answer) }
-
-    PromptPanel { QuestionPrompt(question, characterStyle = KanaStyles.Hero) }
-    OutlinedTextField(
-        value = answer,
-        onValueChange = { answer = it },
-        label = { Text(stringResource(R.string.quiz_answer_label)) },
-        singleLine = true,
-        enabled = !answered,
-        textStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Normal),
-        shape = MaterialTheme.shapes.small,
-        keyboardOptions = KeyboardOptions(
-            capitalization = KeyboardCapitalization.None,
-            autoCorrectEnabled = false,
-            keyboardType = KeyboardType.Ascii,
-            imeAction = ImeAction.Done,
-        ),
-        keyboardActions = KeyboardActions(onDone = { submit() }),
-        modifier = Modifier
-            .fillMaxWidth()
-            .focusRequester(focusRequester),
-    )
-    if (!answered) {
-        PrimaryButton(stringResource(R.string.quiz_action_validate), onClick = submit, enabled = answer.isNotBlank())
-    }
-
-    LaunchedEffect(question) {
-        if (!answered) focusRequester.requestFocus()
-    }
-}
-
-@Composable
 private fun ChoiceQuestionContent(
     question: Question,
     feedback: QuestionResult?,
@@ -368,18 +320,6 @@ private fun ChoiceQuestionContent(
         enabled = feedback == null,
         onChoose = onSubmit,
     )
-}
-
-@Composable
-internal fun MeaningText(character: JapaneseCharacter) {
-    // English meanings come from the TP data (the French ones of the old data files are gone).
-    character.meaning?.let {
-        Text(
-            text = stringResource(R.string.quiz_meaning, it),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }
 
 /** Correction card: rises 16 dp and fades in (220 ms) when the answer is checked. */
@@ -418,15 +358,20 @@ private fun FeedbackCard(feedback: QuestionResult) {
                     ),
                     style = MaterialTheme.typography.titleLarge,
                 )
-                val readsAs = stringResource(R.string.quiz_reads_as, character.readings.joinToString(" / "))
+                // Kanji readings are shown in hiragana, kana readings in romaji.
+                val readings = character.kanaReadings.all.ifEmpty { character.readings }
+                val readsAs = stringResource(R.string.quiz_reads_as, readings.joinToString(" / "))
                 Text(
                     text = buildAnnotatedString {
                         appendMixed(character.symbol)
                         append(" ")
-                        append(readsAs)
+                        appendMixed(readsAs)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                 )
+                character.meaning?.let {
+                    Text(text = stringResource(R.string.quiz_meaning, it), style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
     }
@@ -537,7 +482,10 @@ private fun MistakeRow(result: QuestionResult) {
             JapaneseText(text = character.symbol, style = if (character.symbol.length > 1) KanaStyles.Compact else KanaStyles.List)
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(character.readings.joinToString(" / "), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = buildAnnotatedString { appendMixed(character.kanaReadings.all.ifEmpty { character.readings }.joinToString(" / ")) },
+                style = MaterialTheme.typography.titleMedium,
+            )
             val label = stringResource(R.string.quiz_given_answer)
             Text(
                 text = buildAnnotatedString {
@@ -584,7 +532,7 @@ private fun RomajiToCharacterPreview() {
 @Preview(showBackground = true, heightDp = 800)
 @Composable
 private fun FinishedPreview() {
-    val question = Question.CharacterToRomaji(previewCharacters[1])
+    val question = Question.CharacterToRomajiChoice(previewCharacters[1], listOf("nu", "ne", "no", "me"))
     UnolingoTheme {
         QuizContent(
             title = "Hiragana",

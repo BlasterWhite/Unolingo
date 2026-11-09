@@ -1,14 +1,14 @@
 package fr.enssat.unolingo.mguezenn_mphongsa.ui.navigation
 
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import kotlinx.serialization.Serializable
 
 @Serializable
 data object HomeRoute
 
 @Serializable
-data class QuizRoute(val characterSet: CharacterSet, val mode: QuizMode)
+data class QuizRoute(val config: QuizConfig)
 
 @Serializable
 data object StatsRoute

@@ -2,7 +2,7 @@ package fr.enssat.unolingo.mguezenn_mphongsa.domain.quiz
 
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.CharacterSet
 import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.JapaneseCharacter
-import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizMode
+import fr.enssat.unolingo.mguezenn_mphongsa.domain.model.QuizConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -16,7 +16,7 @@ class QuizPoolTest {
     }
 
     @Test
-    fun kanji_defaultKeepsGradesOneAndTwo() {
+    fun kanji_defaultKeepsGradesUpToTwo() {
         val pool = QuizPool.select(CharacterSet.KANJI, kanji)
 
         assertEquals(24, pool.size)
@@ -24,16 +24,28 @@ class QuizPoolTest {
     }
 
     @Test
-    fun kanji_customGrades() {
-        val pool = QuizPool.select(CharacterSet.KANJI, kanji, setOf(3))
+    fun kanji_keepsEveryGradeUpToTheChosenOne() {
+        val pool = QuizPool.select(CharacterSet.KANJI, kanji, grade = 3)
 
-        assertEquals(12, pool.size)
-        assertTrue(pool.all { it.grade == 3 })
+        assertEquals(36, pool.size)
+        assertTrue(pool.all { it.grade!! <= 3 })
+        assertEquals(12, QuizPool.select(CharacterSet.KANJI, kanji, grade = 1).size)
+        // Grade 8 (other jōyō kanji) is the highest: everything is kept.
+        assertEquals(kanji, QuizPool.select(CharacterSet.KANJI, kanji, grade = 8))
     }
 
     @Test
-    fun kanji_gradesMatchingNothing_fallBackToAll() {
-        assertEquals(kanji, QuizPool.select(CharacterSet.KANJI, kanji, setOf(9)))
+    fun kanji_selectsFromTheConfig() {
+        val pool = QuizPool.select(QuizConfig(CharacterSet.KANJI, grade = 4), kanji)
+
+        assertEquals(48, pool.size)
+    }
+
+    @Test
+    fun kanji_gradeMatchingNothing_fallBackToAll() {
+        val gradeEightOnly = kanji.filter { it.grade == 8 }
+
+        assertEquals(gradeEightOnly, QuizPool.select(CharacterSet.KANJI, gradeEightOnly, grade = 1))
     }
 
     @Test
@@ -50,7 +62,7 @@ class QuizPoolTest {
         val readings = pool.flatMap { it.readings }.toSet()
 
         repeat(20) { seed ->
-            val questions = QuestionGenerator(Random(seed)).generate(pool, QuizMode.DISPLAY)
+            val questions = QuestionGenerator(Random(seed)).generate(pool, QuizConfig(CharacterSet.KANJI))
             questions.forEach { q ->
                 assertTrue(q.character.symbol in allowed)
                 when (q) {

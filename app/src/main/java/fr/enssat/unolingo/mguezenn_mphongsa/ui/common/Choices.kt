@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -54,9 +55,12 @@ val Question.choiceOptions: List<ChoiceOption>
     get() = when (this) {
         is Question.RomajiToCharacter -> choices.map { ChoiceOption(it.symbol, isJapanese = true) }
         is Question.SoundToCharacter -> choices.map { ChoiceOption(it.symbol, isJapanese = true) }
-        is Question.CharacterToRomajiChoice -> choices.map { ChoiceOption(it, isJapanese = false) }
+        is Question.MeaningToCharacter -> choices.map { ChoiceOption(it.symbol, isJapanese = true) }
+        // Kanji readings are hiragana (Klee One), kana readings romaji (Lexend).
+        is Question.CharacterToRomajiChoice -> choices.map { ChoiceOption(it, isJapanese = it.any(AnswerChecker::isKana)) }
         is Question.CharacterToSound -> choices.map { ChoiceOption(it, isJapanese = false) }
-        is Question.CharacterToRomaji -> emptyList()
+        // An English meaning is Latin text.
+        is Question.CharacterToMeaning -> choices.map { ChoiceOption(it, isJapanese = false) }
     }
 
 /** Instruction shown above the prompt. */
@@ -64,7 +68,9 @@ val Question.choiceOptions: List<ChoiceOption>
 val Question.instructionRes: Int
     get() = when (this) {
         is Question.RomajiToCharacter -> R.string.quiz_prompt_character
-        is Question.CharacterToRomaji, is Question.CharacterToRomajiChoice -> R.string.quiz_prompt_reading
+        is Question.CharacterToRomajiChoice -> R.string.quiz_prompt_reading
+        is Question.CharacterToMeaning -> R.string.quiz_prompt_meaning
+        is Question.MeaningToCharacter -> R.string.quiz_prompt_character_meaning
         is Question.SoundToCharacter -> R.string.quiz_prompt_sound
         is Question.CharacterToSound -> R.string.quiz_prompt_pronunciation
     }
@@ -98,8 +104,26 @@ fun QuestionPrompt(
     romajiStyle: TextStyle = MaterialTheme.typography.displayLarge,
 ) {
     when (question) {
-        is Question.RomajiToCharacter -> Text(text = question.prompt, style = romajiStyle, modifier = modifier)
-        is Question.CharacterToRomaji, is Question.CharacterToRomajiChoice, is Question.CharacterToSound ->
+        // A kanji reading is shown in hiragana: Klee One, at a size that fits several kana on one line.
+        is Question.RomajiToCharacter ->
+            if (question.prompt.any(AnswerChecker::isKana)) {
+                JapaneseText(
+                    text = question.prompt,
+                    style = KanaStyles.Duel,
+                    textAlign = TextAlign.Center,
+                    modifier = modifier,
+                )
+            } else {
+                Text(text = question.prompt, style = romajiStyle, modifier = modifier)
+            }
+        // A meaning can be several words: a smaller, centered Lexend style.
+        is Question.MeaningToCharacter -> Text(
+            text = question.prompt,
+            style = MaterialTheme.typography.headlineLarge,
+            textAlign = TextAlign.Center,
+            modifier = modifier,
+        )
+        is Question.CharacterToRomajiChoice, is Question.CharacterToSound, is Question.CharacterToMeaning ->
             JapaneseText(text = question.character.symbol, style = characterStyle, modifier = modifier)
         is Question.SoundToCharacter -> Icon(
             painter = painterResource(R.drawable.ic_volume_up),

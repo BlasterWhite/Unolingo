@@ -12,7 +12,7 @@ class QuizSessionTest {
     private val ki = JapaneseCharacter("き", listOf("ki"))
     private val session = QuizSession(
         listOf(
-            Question.CharacterToRomaji(ka),
+            Question.CharacterToRomajiChoice(ka, listOf("ka", "ki")),
             Question.RomajiToCharacter(ki, "ki", listOf(ka, ki)),
         ),
     )
