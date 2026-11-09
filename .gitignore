@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Hangar.AI — tableau de tâches local
+.hangar/
